@@ -5,3 +5,8 @@ references/
 promo/
 __pycache__/
 art/faces/build/
+
+native/windows/bin/
+native/windows/obj/
+native/windows/out/
+*.tgz

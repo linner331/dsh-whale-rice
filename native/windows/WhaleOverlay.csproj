@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Windows desktop overlay helper for dsh-whale-rice.
+
+    One borderless, always-on-top, per-pixel-transparent window per monitor, each hosting its own
+    WebView2 (composition hosted, so the page's transparent background really is transparent). The
+    page tells us which rectangles are interactive (`{type:"hit", rects:[[x,y,w,h],…], capture}`) and
+    the window stays click-through everywhere else.
+
+    Built by scripts/build.mjs with `dotnet build`; targets .NET Framework 4.8 so the helper runs on
+    any Windows 10/11 without installing a runtime.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>whale-overlay</AssemblyName>
+    <RootNamespace>WhaleOverlay</RootNamespace>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <DebugType>none</DebugType>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+  </ItemGroup>
+</Project>

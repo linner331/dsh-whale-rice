@@ -10,13 +10,38 @@ import { ATLAS } from '../shared/sprite.ts'
 import { Whale } from '../shared/whale.ts'
 
 declare global {
-  interface Window { webkit?: { messageHandlers?: { whale?: { postMessage(body: unknown): void } } } }
+  interface Window {
+    webkit?: { messageHandlers?: { whale?: { postMessage(body: unknown): void } } }
+    /** WebView2 host bridge (Windows helper). */
+    chrome?: {
+      webview?: {
+        postMessage(body: unknown): void
+        addEventListener?(type: 'message', handler: (event: { data: unknown }) => void): void
+      }
+    }
+  }
 }
 
+/** Talk to whichever native helper hosts this page: WKWebView (macOS) or WebView2 (Windows). */
+const send = (body: unknown): void => {
+  window.webkit?.messageHandlers?.whale?.postMessage(body)
+  window.chrome?.webview?.postMessage(body)
+}
+
+// The Windows helper reads Escape from a low-level hook (it never takes the foreground) and forwards
+// it here, so the picker behaves the same as it does on macOS.
+window.chrome?.webview?.addEventListener?.('message', (event) => {
+  const data = event.data as { type?: unknown; key?: unknown } | null
+  if (data?.type === 'key' && typeof data.key === 'string') {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: data.key }))
+  }
+})
+
 // Surface page errors in ~/.dsh/whale-rice/overlay.log via the native helper.
-const nativeLog = (text: string): void => window.webkit?.messageHandlers?.whale?.postMessage({ type: 'log', text })
+const nativeLog = (text: string): void => send({ type: 'log', text })
 window.addEventListener('error', e => nativeLog(`${e.message} @ ${e.filename}:${e.lineno}`))
 window.addEventListener('unhandledrejection', e => nativeLog(`unhandled: ${String(e.reason)}`))
+nativeLog(`page up: ${location.pathname}${location.search.replace(/[?&]t=[^&]*/, '')}`)
 
 const params = new URLSearchParams(location.search)
 const token = params.get('t') ?? ''
@@ -73,7 +98,7 @@ source.onmessage = (message) => {
   if (whale) feed(whale, s, prev)
   syncPicker(s.editing)
 }
-source.onerror = () => { whale?.setActivity('idle') }
+source.onerror = () => { nativeLog('state stream lost'); whale?.setActivity('idle') }
 
 function syncWhale(prev: WhaleState | null): void {
   if (hostsWhale() && !whale) {
@@ -141,9 +166,11 @@ function openPicker(): HTMLElement {
 let lastHit = ''
 setInterval(() => {
   const rects = whale ? [whale.hitRect()].map(r => [r.x, r.y, r.width, r.height].map(Math.round)) : []
-  const capture = picker !== null || (whale?.interacting ?? false)
-  const hit = JSON.stringify({ rects, capture })
+  // `capture` = the overlay must keep the mouse; `editing` = the region picker owns the keyboard too.
+  const editing = picker !== null
+  const capture = editing || (whale?.interacting ?? false)
+  const hit = JSON.stringify({ rects, capture, editing })
   if (hit === lastHit) return
   lastHit = hit
-  window.webkit?.messageHandlers?.whale?.postMessage({ type: 'hit', rects, capture })
-}, 50)
+  send({ type: 'hit', rects, capture, editing })
+}, 16)

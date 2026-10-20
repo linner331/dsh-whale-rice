@@ -1,14 +1,14 @@
 # dsh-whale-rice · 鲸鱼娘吃白饭
 
 A DeepSeek Harness (DSH) plugin: a chibi whale maid keeps eating white rice while the model is
-generating, and puts her bowl down when it stops. On macOS she lives on your desktop, anywhere on
-any screen; elsewhere she stays inside the DSH window.
+generating, and puts her bowl down when it stops. On macOS and Windows she lives on your desktop,
+anywhere on any screen; elsewhere she stays inside the DSH window.
 
 ## Features
 
 - **Eats while tokens flow**: from `step/start` until the model's `assistant/message` she loops the eating animation; gaps under 1.5s between steps don't interrupt her. When generation stops she finishes the bite and puts the bowl down.
 - **Balance on hover**: with an API key configured, the host reads `GET https://api.deepseek.com/user/balance` and the tooltip shows the current balance. Nothing is shown when it can't be read (e.g. DeepSeek-account sign-in), and per-reply costs / top-ups are deliberately not displayed: balance deltas can't be attributed to a single reply reliably.
-- **Desktop mode (macOS)**: she leaves the DSH window. Double-click her → every screen dims → drag a rectangle on any screen to set her area (Esc / right-click cancels). Saved in `~/.dsh/whale-rice/overlay.json`.
+- **Desktop mode (macOS, Windows)**: she leaves the DSH window. Double-click her → every screen dims → drag a rectangle on any screen to set her area (Esc / right-click cancels). Saved in `~/.dsh/whale-rice/overlay.json`.
 - **Interactions**: click to poke, drag to carry her (she snaps back inside her area), and she hops around her area on her own.
 
 ## Installation
@@ -26,10 +26,20 @@ Optional config (`cordis.patch.yml`):
 config:
   apiKeyRef: DEEPSEEK_API_KEY  # credential / env var name
   pollSeconds: 60              # polling interval, minimum 15
-  desktop: true                # macOS: false keeps her inside the DSH window
+  desktop: true                # false keeps her inside the DSH window
 ```
 
-Desktop mode runs a small native helper, `lib/whale-overlay` (Swift, source in `native/`, compiled with `swiftc` at build time): one transparent always-on-top window per screen, click-through everywhere except the whale. It only talks to a private `127.0.0.1` port opened by the plugin (random token per launch) and exits when DSH does.
+Desktop mode runs a small native helper, `lib/whale-overlay` / `lib/whale-overlay.exe` (sources in
+`native/`, compiled at build time): one transparent always-on-top window per screen, click-through
+everywhere except the whale. It only talks to a private `127.0.0.1` port opened by the plugin
+(random token per launch) and exits when DSH does.
+
+- **macOS**: Swift + WKWebView, compiled with `swiftc`. No extra runtime needed.
+- **Windows**: .NET Framework 4.8 + WebView2 (composition hosting, so the page's transparent
+  background is really transparent), in `native/windows/`. Building it needs the .NET SDK
+  (`dotnet build`); the WebView2 runtime ships with Windows 10/11's Edge. Without the SDK the helper
+  is simply skipped and she stays inside the DSH window. Hit-testing, DPI scaling and the region
+  picker's Esc key are handled by the helper; `~/.dsh/whale-rice/overlay.log` records what it did.
 
 ## Development
 
@@ -57,6 +67,7 @@ src/
   client/      In-app entry (inside the DSH window)
   overlay/     Desktop overlay page (one per screen, inside the native helper)
 native/macos/  Swift helper: transparent click-through windows
+native/windows/  C# helper: the same, on .NET Framework 4.8 + composition-hosted WebView2
 assets/        Shipped runtime assets: sprites/whale.webp + whale.json, artwork license
 art/           Source artwork (not shipped): generated grids, reference, prompts, sprites.json manifest
 scripts/       build.mjs (all artifacts → lib/), sprites/build_sprites.py (art → atlas)

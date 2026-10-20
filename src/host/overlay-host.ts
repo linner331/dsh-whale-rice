@@ -1,7 +1,7 @@
 /**
- * Desktop overlay (macOS): runs the native whale-overlay helper so the whale can live anywhere on
- * screen, outside the DSH window. The helper's pages talk to a private 127.0.0.1 server guarded by a
- * random token, so they need no DSH browser session.
+ * Desktop overlay (macOS, Windows): runs the native whale-overlay helper so the whale can live
+ * anywhere on screen, outside the DSH window. The helper's pages talk to a private 127.0.0.1 server
+ * guarded by a random token, so they need no DSH browser session.
  */
 import { spawn, type ChildProcess } from 'node:child_process'
 import { randomBytes, timingSafeEqual } from 'node:crypto'
@@ -10,6 +10,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { Hub } from './hub.ts'
 
 /** Region in top-left-origin global screen points (spans the union of all displays). */
@@ -17,7 +18,8 @@ export interface ScreenRect { x: number; y: number; w: number; h: number }
 
 const LIB_DIR = new URL('./', import.meta.url)          // lib/ at runtime
 const ASSET_DIR = new URL('../assets/sprites/', import.meta.url)
-const HELPER = new URL('whale-overlay', LIB_DIR)
+const HELPER_NAME = process.platform === 'win32' ? 'whale-overlay.exe' : 'whale-overlay'
+const HELPER = new URL(HELPER_NAME, LIB_DIR)
 const STORE = join(homedir(), '.dsh', 'whale-rice', 'overlay.json')
 const LOG = join(homedir(), '.dsh', 'whale-rice', 'overlay.log')
 const MAX_RESTARTS = 3
@@ -42,7 +44,7 @@ export class OverlayHost {
   constructor(private readonly hub: Hub) {}
 
   static supported(): boolean {
-    return process.platform === 'darwin' && existsSync(HELPER)
+    return (process.platform === 'darwin' || process.platform === 'win32') && existsSync(HELPER)
   }
 
   async start(): Promise<void> {
@@ -68,7 +70,10 @@ export class OverlayHost {
     const url = `http://127.0.0.1:${port}/?t=${this.token}`
     let log: number | 'ignore' = 'ignore'
     try { log = openSync(LOG, 'w') } catch { /* keep going without a log */ }
-    const child = spawn(HELPER.pathname, ['--url', url, '--ppid', String(process.pid)], { stdio: ['ignore', log, log] })
+    const child = spawn(fileURLToPath(HELPER), ['--url', url, '--ppid', String(process.pid)], {
+      stdio: ['ignore', log, log],
+      windowsHide: true,
+    })
     this.child = child
     child.once('spawn', () => this.setRunning(true))
     child.once('error', () => this.crashed())
@@ -114,6 +119,7 @@ export class OverlayHost {
       const file = FILES[url.pathname]
       if (!file) return void res.writeHead(404).end()
       const bytes = await readFile(file[0])
+      if (process.env.WHALE_DEBUG) console.error(`[whale-overlay] GET ${url.pathname} ${bytes.length}B`)
       return void res.writeHead(200, { 'Content-Type': file[1], 'Cache-Control': 'no-store' }).end(bytes)
     }
 

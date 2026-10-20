@@ -82,6 +82,7 @@ export class Whale {
   private returnTo: { x: number; y: number } | null = null   // thrown out while upset: walk back once calm
   private disposed = false
   private readonly reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
+  private unbindWindow: (() => void) | undefined
 
   constructor(private readonly layer: HTMLElement, imageUrl: string, private readonly regions: RegionSource) {
     this.root.className = 'wr-whale wr-idle'
@@ -106,6 +107,7 @@ export class Whale {
     cancelAnimationFrame(this.raf)
     this.sprite.stop()
     window.removeEventListener('resize', this.onResize)
+    this.unbindWindow?.()
     this.root.remove()
   }
 
@@ -514,6 +516,14 @@ export class Whale {
     }
     this.root.addEventListener('pointerup', up)
     this.root.addEventListener('pointercancel', up)
+    // A release that lands outside her box (a fast drag) only reaches the document; without this she
+    // would stay dangling in the hand that let go.
+    window.addEventListener('pointerup', up, true)
+    window.addEventListener('pointercancel', up, true)
+    this.unbindWindow = () => {
+      window.removeEventListener('pointerup', up, true)
+      window.removeEventListener('pointercancel', up, true)
+    }
     this.root.addEventListener('dblclick', () => void this.editArea())
   }
 
