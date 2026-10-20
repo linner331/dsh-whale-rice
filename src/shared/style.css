@@ -3,12 +3,17 @@
   inset: 0;
   pointer-events: none;
   z-index: 2147483000;
+  /* DSH marks every direct child of <body> outside #root as no-drag (macOS); a full-window layer
+     would then cover the title bar's drag region and the window could no longer be moved. Only
+     the whale herself and the region frame opt out of window dragging (below). */
+  -webkit-app-region: initial !important;
 }
 
 .wr-whale {
   position: absolute;
   left: 0;
   top: 0;
+  -webkit-app-region: no-drag;
   pointer-events: auto;
   cursor: grab;
   touch-action: none;
@@ -56,6 +61,7 @@
 
 .wr-region {
   position: absolute;
+  -webkit-app-region: no-drag;
   pointer-events: auto;
   border: 2px dashed #3d6fd6;
   border-radius: 12px;
