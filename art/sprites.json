@@ -2,7 +2,8 @@
   "output": {
     "image": "assets/sprites/whale.webp",
     "meta": "assets/sprites/whale.json",
-    "preview": "art/previews/atlas.png"
+    "preview": "art/previews/atlas.png",
+    "scale": 0.84
   },
   "cell": { "w": 560, "h": 420 },
   "columns": 8,

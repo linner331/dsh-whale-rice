@@ -1,0 +1,5 @@
+# Left out of GitHub's source archives, which is what `dsh plugin add github:…` (pnpm) downloads
+# before building: source artwork, previews and the dev harness are not needed to build or run.
+art/ export-ignore
+dev/ export-ignore
+scripts/sprites/ export-ignore

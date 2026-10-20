@@ -46,6 +46,7 @@
     "lib/client.js",
     "lib/overlay.js",
     "lib/overlay.html",
+    "lib/whale-overlay",
     "native/macos/WhaleOverlay.swift",
     "cordis.patch.yml",
     "assets/sprites/whale.webp",

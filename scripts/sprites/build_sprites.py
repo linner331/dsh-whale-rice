@@ -471,7 +471,13 @@ def main(manifest_path: Path) -> None:
     pins = {name: {"x": spec.get("x", cfg["anchor"]["x"]), "y": spec.get("y", 40)}
             for name, spec in cfg.get("pins", {}).items()}
 
-    atlas.save(image_path, quality=90, method=6)
+    # The shipped image can be smaller than the layout: the runtime sizes it by `cell` × columns
+    # (CSS background-size), so every coordinate stays in cell px. The whale is drawn at 0.42×, so
+    # 0.84× is exactly 2× for Retina; anything more only costs memory (decoded RGBA per page).
+    out_scale = cfg["output"].get("scale", 1.0)
+    shipped = atlas if out_scale == 1.0 else atlas.resize(
+        (round(atlas.width * out_scale), round(atlas.height * out_scale)), Image.LANCZOS)
+    shipped.save(image_path, quality=90, method=6)
 
     meta = {
         "image": image_path.name,
