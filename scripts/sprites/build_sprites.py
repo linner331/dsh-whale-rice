@@ -276,10 +276,39 @@ def expand(ids: list[str]) -> list[str]:
 
 # ---- main ------------------------------------------------------------------------------------
 
+def face_sheet(art: Path, spec: dict) -> dict:
+    """Build the sheet for one "faces" entry and return it as a source.
+
+    spec: {"mood", "base", "edit", "frames": {frame id: single-frame image}}. <edit> is <base> with
+    only the expression changed; the new frames are "<id>@<mood>"."""
+    from faces import apply_face
+    ids = list(spec["frames"])
+    imgs = apply_face(art / spec["base"], art / spec["edit"], [art / spec["frames"][f] for f in ids])
+    cols = 2
+    rows = (len(imgs) + cols - 1) // cols
+    cw = max(i.width for i in imgs) + 120
+    ch = max(i.height for i in imgs) + 120
+    sheet = Image.new("RGB", (cw * cols, ch * rows), "white")
+    for k, im in enumerate(imgs):
+        sheet.paste(im, ((k % cols) * cw + (cw - im.width) // 2, (k // cols) * ch + (ch - im.height) // 2))
+    rel = Path("faces") / "build" / f"{spec['mood']}-{ids[0].rsplit('-', 1)[0]}.png"
+    (art / rel).parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(art / rel)
+    frames = [f"{f}@{spec['mood']}" for f in ids] + [None] * (cols * rows - len(ids))
+    return {"file": str(rel), "grid": [cols, rows], "frames": frames, **spec.get("source", {})}
+
+
 def main(manifest_path: Path) -> None:
     cfg = json.loads(manifest_path.read_text())
     art = manifest_path.parent
     body_h = cfg["bodyHeight"]
+
+    # pass 0: "faces" (expression patches) turn existing frames into mood variants "<frame>@<mood>"
+    # (see faces.py), packed on a generated sheet that then goes through the normal pipeline.
+    face_moods = []
+    for spec in cfg.get("faces", []):
+        cfg["sources"].append(face_sheet(art, spec))
+        face_moods.append(spec["mood"])
 
     # pass 1: cut and measure every frame
     sources = []
@@ -442,6 +471,22 @@ def main(manifest_path: Path) -> None:
         if len(ms) != len(seq):
             sys.exit(f"animation {name}: {len(seq)} frames but {len(ms)} durations")
         animations[name] = {"frames": [index[f] for f in seq], "durations": ms}
+    # Mood variants. An animation all of whose frames have a "<frame>@<mood>" twin gets a
+    # "<name>@<mood>" copy; "moodAnims" maps animation → mood → variant so the runtime can play the
+    # mood's version of an action and fall back to the plain one. Whole-frame variants drawn as
+    # their own animations can be listed in the manifest's "moodAnims" too.
+    mood_anims = {k: dict(v) for k, v in cfg.get("moodAnims", {}).items()}
+    for name, a in list(animations.items()):
+        seq = expand(cfg["animations"][name]["frames"])
+        for mood in face_moods:
+            twins = [f"{f}@{mood}" for f in seq]
+            if all(t in index for t in twins):
+                animations[f"{name}@{mood}"] = {"frames": [index[t] for t in twins], "durations": a["durations"]}
+                mood_anims.setdefault(name, {})[mood] = f"{name}@{mood}"
+    for name, moods in mood_anims.items():
+        for mood, variant in moods.items():
+            if name not in animations or variant not in animations:
+                sys.exit(f"moodAnims {name}.{mood}: unknown animation {variant}")
     # "spin": the same curled-up ball drawn at 0/90/180/270° (rolling direction). The runtime turns
     # it like a wheel around one pivot, so the four frames are re-centred on a shared centre exactly
     # one rolling radius above the floor; distance travelled = angle × radius, so nothing slides.
@@ -493,6 +538,7 @@ def main(manifest_path: Path) -> None:
         "rollFacing": cfg.get("rollFacing", "left"),    # which way the roll moves as drawn
         "runFacing": cfg.get("runFacing", "left"),      # which way the run frames face as drawn
         "animations": animations,
+        "moodAnims": mood_anims,
         "spin": spin,
         "pins": pins,
     }

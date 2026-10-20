@@ -13,7 +13,7 @@
  */
 import type { Activity } from './feed.ts'
 import type { RegionSource } from './region.ts'
-import { anim, animDuration, CELL, PIN, POSE, ROLL_FACING, RUN_FACING, SPIN, Sprite, WALK_FACING, type AnimName, type Steps } from './sprite.ts'
+import { anim, animDuration, animFor, CELL, PIN, POSE, ROLL_FACING, RUN_FACING, SPIN, Sprite, WALK_FACING, type AnimName, type Steps } from './sprite.ts'
 import { Emotion, EVENTS, type EmotionEvent, type Mood } from './emotion.ts'
 import { Flight, Pendulum, PointerVelocity } from './toss.ts'
 
@@ -79,6 +79,7 @@ export class Whale {
   readonly emotion = new Emotion()
   private turnDeg = 0                   // extra rotation (somersault ball, dangling swing, tumbling flight)
   private held: { token: number; px: number; py: number; since: number; velocity: PointerVelocity; swing: Pendulum } | null = null
+  private returnTo: { x: number; y: number } | null = null   // thrown out while upset: walk back once calm
   private disposed = false
   private readonly reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -216,6 +217,11 @@ export class Whale {
     const reaction = this.reactions.shift()
     if (reaction) return void this.runReaction(reaction)
     if (this.mode === 'idle' && this.emotion.mood) return void this.runMood()
+    if (this.mode === 'idle' && this.returnTo) {
+      const { x, y } = this.returnTo
+      this.returnTo = null
+      return this.walkTo(x, y)
+    }
     if (this.mode === 'idle') this.scheduleIdleLife()
   }
 
@@ -298,6 +304,8 @@ export class Whale {
 
   // ---- moods: read off the emotion model, lived out until they fade -------------------------
 
+  private static readonly UPSET: Mood[] = ['sulk', 'wary', 'gloom']
+
   private static readonly MOOD_LOOP: Record<Exclude<Mood, 'sleepy'>, () => AnimName> = {
     sulk: () => (Math.random() < 0.25 ? 'sulk_peek' : 'sulk'),
     wary: () => 'wary',
@@ -371,9 +379,11 @@ export class Whale {
     // Mirror the frames when she heads the other way from how they were drawn.
     const goingLeft = tx < from.x
     this.root.classList.toggle('wr-flip', g.facing === 'left' ? !goingLeft : goingLeft)
-    void (async () => { while (await this.play(token, anim(g.anim))) { /* keep stepping */ } })()
+    // The mood picks the version of the gait (a sulky walk when cross), if one is drawn.
+    const steps = animFor(g.anim, this.emotion.mood)
+    void (async () => { while (await this.play(token, anim(steps))) { /* keep stepping */ } })()
     const duration = (dist / g.speed) * 1000
-    const stride = animDuration(g.anim) / 2           // two leaps per cycle
+    const stride = animDuration(steps) / 2            // two leaps per cycle
     const t0 = performance.now()
     const frame = (now: number): void => {
       if (!this.alive(token)) return
@@ -516,6 +526,7 @@ export class Whale {
     // Picked up again while sulking / wary: no patience left, she struggles right away.
     const before = this.emotion.mood
     const angry = before === 'sulk' || before === 'wary'
+    this.returnTo = null
     this.emotion.feel('grab')
     if (angry) this.say(pick(LINES.regrab))
     const velocity = new PointerVelocity()
@@ -628,12 +639,16 @@ export class Whale {
       this.say(pick(LINES.splat))
       if (!(await this.play(token, anim('land_b')))) return
     }
-    // Then she walks back into her area if needed, and the mood plays out from idle.
-    // Thrown out of her area: walk back in.
+    // Thrown out of her area: walk back in. The mood plays out from idle.
     const tx = Math.min(Math.max(this.pos.x, r.left), r.right - W)
     const ty = Math.min(Math.max(this.pos.y, r.top), r.bottom - H)
-    if (Math.hypot(tx - this.pos.x, ty - this.pos.y) > 4) this.walkTo(tx, ty)
-    else this.toIdle()
+    // Upset with no walk drawn for that mood (the plain one smiles): sulk it out where she fell,
+    // walk back once calm. With a mood version she stomps back right away, then sulks.
+    const mood = this.emotion.mood
+    const smilingWalk = animFor('walk', mood) === 'walk'
+    if (Math.hypot(tx - this.pos.x, ty - this.pos.y) <= 4) this.toIdle()
+    else if (mood && Whale.UPSET.includes(mood) && smilingWalk) { this.returnTo = { x: tx, y: ty }; this.toIdle() }
+    else this.walkTo(tx, ty)
   }
 
   private async editArea(): Promise<void> {

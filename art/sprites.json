@@ -66,6 +66,12 @@
       "scaleMatch": { "frame": "run-1", "to": "walk-1", "by": "face" } }
   ],
 
+  "faces": [
+    { "mood": "sulk", "base": "batch5/walk-to-run/walk-1.png", "edit": "faces/sulk-edit.jpeg",
+      "frames": { "walk-1": "batch5/walk-to-run/walk-1.png", "walk-2": "batch5/walk-to-run/walk-2.png",
+                  "walk-3": "batch5/walk-to-run/walk-3.png", "walk-4": "batch5/walk-to-run/walk-4.png" } }
+  ],
+
   "spin": { "frames": ["sault-ball-0", "sault-ball-90", "sault-ball-180", "sault-ball-270"] },
 
   "pins": {

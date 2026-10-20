@@ -58,6 +58,20 @@ export class Sprite {
   }
 }
 
+/**
+ * Mood variants: the version of an action for a mood (e.g. walk while sulking → "walk@sulk"),
+ * from the manifest's moodAnims. A mood without its own version borrows a related mood's, and
+ * otherwise the plain animation plays — so new variants can be added one at a time.
+ */
+const MOOD_ANIMS = meta.moodAnims as Record<string, Record<string, AnimName>>
+const MOOD_FALLBACK: Record<string, string> = { wary: 'sulk' }   // on guard ≈ still cross
+
+export function animFor(name: AnimName, mood: string | null): AnimName {
+  const variants = MOOD_ANIMS[name]
+  if (!variants || !mood) return name
+  return variants[mood] ?? variants[MOOD_FALLBACK[mood] ?? ''] ?? name
+}
+
 /** Length of one cycle of a named animation, ms. */
 export function animDuration(name: AnimName): number {
   return meta.animations[name].durations.reduce((a: number, b: number) => a + b, 0)

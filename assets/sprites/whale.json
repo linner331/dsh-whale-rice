@@ -1,6 +1,6 @@
 {
   "image": "whale.webp",
-  "version": "d872eccaaf73",
+  "version": "5267c4d4efd1",
   "cell": {
     "w": 560,
     "h": 420
@@ -109,7 +109,11 @@
     "run-1",
     "run-2",
     "run-3",
-    "run-4"
+    "run-4",
+    "walk-1@sulk",
+    "walk-2@sulk",
+    "walk-3@sulk",
+    "walk-4@sulk"
   ],
   "poses": {
     "rest": 2,
@@ -583,6 +587,25 @@
         900,
         1900
       ]
+    },
+    "walk@sulk": {
+      "frames": [
+        99,
+        100,
+        101,
+        102
+      ],
+      "durations": [
+        170,
+        170,
+        170,
+        170
+      ]
+    }
+  },
+  "moodAnims": {
+    "walk": {
+      "sulk": "walk@sulk"
     }
   },
   "spin": {
@@ -593,8 +616,8 @@
       44
     ],
     "cx": 320.2,
-    "cy": 260.8,
-    "radius": 143.2
+    "cy": 260.9,
+    "radius": 143.1
   },
   "pins": {
     "grab": {
