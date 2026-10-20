@@ -5,6 +5,8 @@ export interface RegionSource {
   rect(): DOMRect
   /** Let the user change the area; resolves once she may go back to roaming. */
   edit(): Promise<void>
+  /** Set the area directly (director mode), as viewport fractions. */
+  set?(r: Rect): void
 }
 
 /** In-app area: a dashed frame inside the DSH window, stored in localStorage. */
@@ -13,6 +15,7 @@ export class LocalRegion implements RegionSource {
   constructor(private readonly layer: HTMLElement) {}
   rect(): DOMRect { return regionPx(this.r) }
   async edit(): Promise<void> { this.r = await editRegion(this.layer, this.r) }
+  set(r: Rect): void { this.r = r; saveRegion(r) }
 }
 
 export interface Rect { x: number; y: number; w: number; h: number }  // fractions of the viewport

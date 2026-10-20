@@ -20,7 +20,7 @@ export type EmotionEvent =
   | 'grab' | 'struggle' | 'faceplant' | 'stuck' | 'error' | 'stuffed' | 'taskDone' | 'eat' | 'praise' | 'annoy' | 'comfort'
 
 /** [Δvalence, Δarousal, Δneed] per event. Tune here; behaviour follows. */
-const EVENTS: Record<EmotionEvent, [number, number, number]> = {
+export const EVENTS: Record<EmotionEvent, [number, number, number]> = {
   grab:      [-0.05, +0.20,  0.00],   // picked up by the scruff
   struggle:  [-0.25, +0.20,  0.00],   // one bout of struggling while held
   faceplant: [-0.70, +0.60,  0.00],   // thrown and landed on her face
@@ -71,6 +71,12 @@ export class Emotion {
     this.a = clamp(this.a + da * times)
     this.n = Math.max(0, Math.min(1, this.n + dn * times))
     return this.mood
+  }
+
+  /** Back to neutral (director mode). */
+  reset(): void {
+    this.v = this.a = this.n = 0
+    this.at = performance.now()
   }
 
   /** What a click means right now: praise when happy, comfort when low, annoyance when worked up. */

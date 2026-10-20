@@ -40,6 +40,16 @@ pnpm dev          # build + start the local harness at http://127.0.0.1:8770 (DE
 
 The harness (`dev/`) runs the real host-side code with a mock DeepSeek balance API, so you can simulate charges, top-ups, and unloading without installing DSH.
 
+Director mode (off by default; on in the harness) triggers behaviours that otherwise only happen by chance or after a wait, for demos and debugging. Enable it with `director: true` in the plugin config, then:
+
+```bash
+curl 'http://127.0.0.1:8771/?act=run&arg=left'     # run|walk|roll left/right, sleep, oops, full, cheer
+curl 'http://127.0.0.1:8771/?act=grab&arg=5,-650,-450'   # hold 5 s (she struggles), then throw
+curl 'http://127.0.0.1:8771/?act=feel&arg=praise'  # nudge her mood; calm resets it
+```
+
+It only listens on 127.0.0.1 and plays the real animations and state machine; only the trigger is manual.
+
 ```
 src/
   host/        Node half: agent activity (activity.ts), balance, SSE hub, desktop overlay host

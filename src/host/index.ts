@@ -11,6 +11,7 @@ import { BalanceTracker } from './balance.ts'
 import { ActivityTracker } from './activity.ts'
 import { Hub } from './hub.ts'
 import { OverlayHost } from './overlay-host.ts'
+import { Director } from './director.ts'
 
 export const name = 'whale-rice'
 
@@ -22,6 +23,8 @@ export interface Config {
   baseUrl?: string
   /** macOS: show her on the desktop (anywhere on screen) instead of inside the DSH window. */
   desktop?: boolean
+  /** Director mode for demos/debugging: loopback endpoint that triggers behaviours (see director.ts). Off by default. */
+  director?: boolean | { port?: number }
 }
 
 // Minimal structural types for the host services we touch; the real ones come from the DSH host.
@@ -63,6 +66,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
 
   const activity = new ActivityTracker()
   let overlay: OverlayHost | undefined
+  let director: Director | undefined
   const snapshot = () => ({
     ...tracker.state,
     activity: activity.activity,
@@ -70,6 +74,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     overlay: overlay?.running ?? false,
     region: overlay?.region ?? null,
     editing: overlay?.editing ?? false,
+    director: director?.cue ?? null,
   })
   const hub = new Hub(snapshot)
   ctx.effect(() => {
@@ -82,6 +87,16 @@ export function apply(ctx: HostContext, config: Config = {}): void {
       hub.dispose()
     }
   }, 'whale-rice: state hub')
+
+  if (config.director) {
+    const port = (typeof config.director === 'object' && config.director.port) || 8771
+    ctx.effect(() => {
+      const d = new Director(port, hub.emit)
+      director = d
+      d.start()
+      return () => { d.stop(); director = undefined }
+    }, 'whale-rice: director')
+  }
 
   ctx.effect(() => {
     void tracker.poll()

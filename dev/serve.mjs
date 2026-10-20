@@ -51,7 +51,8 @@ const emit = (event, ...args) => (listeners.get(event) ?? []).forEach(fn => fn(.
 process.env.DEEPSEEK_API_KEY = 'dev-key'
 const plugin = await import(new URL('lib/index.js', root))
 // DESKTOP=1 also runs the macOS desktop overlay; by default the whale stays in this page.
-plugin.apply(ctx, { baseUrl: `http://127.0.0.1:${PORT}/mock-deepseek`, pollSeconds: 15, desktop: process.env.DESKTOP === '1' })
+// Director mode is on here: curl 'http://127.0.0.1:8771/?act=run&arg=left'
+plugin.apply(ctx, { baseUrl: `http://127.0.0.1:${PORT}/mock-deepseek`, pollSeconds: 15, desktop: process.env.DESKTOP === '1', director: true })
 
 // ---- http ---------------------------------------------------------------------------------------
 const files = { '/': ['dev/index.html', 'text/html'], '/lib/client.js': ['lib/client.js', 'text/javascript'] }

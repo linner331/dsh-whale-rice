@@ -17,6 +17,8 @@ export interface WhaleState {
   overlay: boolean
   region: ScreenRect | null
   editing: boolean
+  /** Director mode cue (demos/debugging); `seq` increments per cue. */
+  director: { seq: number; act: string; arg: string | null } | null
 }
 
 /** Apply one snapshot. `last` is the previous one, or null right after (re)connecting. */
@@ -25,4 +27,5 @@ export function feed(whale: Whale, s: WhaleState, last: WhaleState | null): void
   // The first snapshot is only a baseline: never replay older events.
   if (!last) return
   if (s.outcome && s.outcome.seq !== last.outcome?.seq) whale.react(s.outcome.kind)
+  if (s.director && s.director.seq !== last.director?.seq) whale.direct(s.director.act, s.director.arg)
 }

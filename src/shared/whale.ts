@@ -14,7 +14,7 @@
 import type { Activity } from './feed.ts'
 import type { RegionSource } from './region.ts'
 import { anim, animDuration, CELL, PIN, POSE, ROLL_FACING, RUN_FACING, SPIN, Sprite, WALK_FACING, type AnimName, type Steps } from './sprite.ts'
-import { Emotion, type EmotionEvent, type Mood } from './emotion.ts'
+import { Emotion, EVENTS, type EmotionEvent, type Mood } from './emotion.ts'
 import { Flight, Pendulum, PointerVelocity } from './toss.ts'
 
 const SCALE = 0.42
@@ -133,6 +133,67 @@ export class Whale {
   react(kind: 'oops' | 'full' | 'cheer'): void {
     const feel: Record<typeof kind, EmotionEvent> = { oops: 'error', full: 'stuffed', cheer: 'taskDone' }
     this.queue({ anim: kind, line: LINES[kind], feel: feel[kind], upbeat: kind === 'cheer' })
+  }
+
+  /** Director mode (demos/debugging): act something out now instead of waiting for chance or time. */
+  direct(act: string, arg: string | null): void {
+    const r = this.regions.rect()
+    const side = arg === 'left' || arg === 'right' ? arg : this.pos.x - r.left > r.right - W - this.pos.x ? 'left' : 'right'
+    // A cue cuts short a mood, an idle gesture or a nap — never a drag, a throw or real work.
+    const free = (): boolean => {
+      if (this.activity !== 'idle' || !['idle', 'walking', 'mood', 'busy', 'asleep'].includes(this.mode)) return false
+      if (this.mode !== 'idle' && this.mode !== 'walking') { this.begin('idle'); this.sprite.show(POSE.rest) }
+      return true
+    }
+    switch (act) {
+      case 'run': case 'walk':
+        if (free()) this.walkTo(side === 'left' ? r.left : r.right - W, this.pos.y, act)
+        return
+      case 'roll': if (free()) this.roll(side); return
+      case 'sleep': if (free()) void this.fallAsleep(); return
+      case 'oops': case 'full': case 'cheer': return this.react(act)
+      case 'feel': if (arg && arg in EVENTS) { this.emotion.feel(arg as EmotionEvent); this.decide() } return
+      case 'calm': this.emotion.reset(); if (this.mode === 'mood') this.toIdle(); return
+      case 'region': {
+        // arg "x,y,w,h" as fractions of the window (in-app area only; the desktop area is picked on screen)
+        const [x, y, w, h] = (arg ?? '').split(',').map(Number)
+        if ([x, y, w, h].every(v => v >= 0 && v <= 1) && this.regions.set) { this.regions.set({ x, y, w, h }); this.regionChanged() }
+        return
+      }
+      case 'grab': {
+        if (!free()) return
+        // arg "seconds,vx,vy": hold that long, then let go with that velocity (px/s; 0,0 = drop)
+        const [secs = 2.5, vx = 0, vy = 0] = (arg ?? '').split(',').map(Number).map(n => (Number.isFinite(n) ? n : undefined))
+        return void this.directedGrab(secs, vx, vy)
+      }
+    }
+  }
+
+  /** Director mode: the real pick-up / dangle / throw, driven by a scripted pointer instead of a mouse. */
+  private async directedGrab(seconds: number, vx: number, vy: number): Promise<void> {
+    const pin = this.setPivot(PIN.x, PIN.y)
+    const x0 = this.pos.x + pin.x, y0 = this.pos.y + pin.y
+    this.grab(x0, y0)
+    const token = this.task
+    const t0 = performance.now()
+    await new Promise<void>(done => {
+      const step = (now: number): void => {
+        const h = this.held
+        if (!h || !this.alive(token)) return done()
+        const t = (now - t0) / 1000
+        const lift = 1 - (1 - Math.min(1, t / 0.5)) ** 2        // raised ~70px, then a gentle sway
+        h.px = x0 + Math.sin(t * 2.4) * 16 * lift
+        h.py = y0 - 70 * lift
+        h.velocity.add(h.px, h.py)
+        if (t < seconds) requestAnimationFrame(step)
+        else done()
+      }
+      requestAnimationFrame(step)
+    })
+    if (!this.held || !this.alive(token)) return
+    this.held = null
+    this.root.classList.remove('wr-held')
+    void this.toss(vx, vy, this.turnDeg)
   }
 
   say(text: string): void {
