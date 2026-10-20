@@ -14,7 +14,7 @@ any screen; elsewhere she stays inside the DSH window.
 ## Installation
 
 ```bash
-dsh plugin --profile web add github:<you>/dsh-whale-rice
+dsh plugin --profile web add github:linner331/dsh-whale-rice
 ```
 
 The key is read from the DSH credentials service under the name `DEEPSEEK_API_KEY` (the same one DSH itself uses), with the environment variable as a fallback.
