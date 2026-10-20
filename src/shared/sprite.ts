@@ -11,6 +11,8 @@ export const ATLAS = `${meta.image}?v=${meta.version}`
 export const POSE = meta.poses
 /** Which way the walk frames face as drawn; the other direction is mirrored. */
 export const WALK_FACING = meta.walkFacing as 'left' | 'right'
+/** Which way the run frames face as drawn. */
+export const RUN_FACING = meta.runFacing as 'left' | 'right'
 /** Which way the somersault travels as drawn. */
 export const ROLL_FACING = meta.rollFacing as 'left' | 'right'
 /** The curled-up ball at 0/90/180/270° (rolling direction), its shared pivot and rolling radius (cell px). */
@@ -54,6 +56,11 @@ export class Sprite {
     this.cancel?.()
     this.cancel = undefined
   }
+}
+
+/** Length of one cycle of a named animation, ms. */
+export function animDuration(name: AnimName): number {
+  return meta.animations[name].durations.reduce((a: number, b: number) => a + b, 0)
 }
 
 /** Expand a named animation into steps, optionally repeated. */

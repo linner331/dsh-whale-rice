@@ -72,7 +72,7 @@ image model drew at a different size within one grid.
 | approval pending (`approval/asked` → `approval/decided`) | waves at you; after 8s pleads and knocks on her bowl |
 | turn ends with `error` / `max-tokens` | chokes / holds her full belly |
 | a turn of 20s+ completes | jumps and gives a thumbs-up |
-| idle | walks or somersaults (rolls like a wheel: distance = angle × radius) around her area, little gestures, naps after 5 minutes |
+| idle | walks, happily runs with her rice bowl (mostly when she's in a good mood), or somersaults (rolls like a wheel: distance = angle × radius) around her area, little gestures, naps after 5 minutes |
 | picked up (drag) | dangles from the scruff under a pinching cursor and swings like a pendulum; struggles after 2.5 s, then goes limp |
 | afterwards (moods) | an emotion model (`src/shared/emotion.ts`): every event adds a fixed impulse to *valence* (unhappy…happy), *arousal* (drained…worked up) and *need* (wants attention), which decay on their own; the mood is the region she is in — sulk, wary, gloom, smug, expect (praise me), sleepy. Repeated events stack, nice events only soften a bad mood, and happy endings (gymnast pose, cheering) are skipped if she ends up upset. New behaviour = one row in the event table |
 | thrown (release while moving) | flies under gravity, bounces off screen edges and tumbles; lands like a gymnast if she comes down upright, otherwise face-plants; walks back if she lands outside her area |

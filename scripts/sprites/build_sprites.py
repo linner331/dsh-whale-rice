@@ -73,7 +73,10 @@ def split(rgb: np.ndarray, grid: list[int] | None) -> list[tuple[int, int, np.nd
     by_cell: dict[int, list[np.ndarray]] = {}
     for c in blobs:
         ys, xs = np.nonzero(c)
-        if ys.max() - ys.min() <= 8 and xs.max() - xs.min() >= 40:   # a drawn floor line: not the character
+        bh, bw = ys.max() - ys.min() + 1, xs.max() - xs.min() + 1
+        thin_line = (bh <= 9 and bw >= 40) or (bw <= 9 and bh >= 40)   # drawn floor / panel divider
+        grid_frame = bw >= w * 0.9 or bh >= h * 0.9                      # a divider spanning the sheet
+        if thin_line or grid_frame and c.sum() < 0.03 * h * w:
             owner[c] = -2
             continue
         cell = min(int(ys.mean() * rows / h), rows - 1) * cols + min(int(xs.mean() * cols / w), cols - 1)
@@ -82,8 +85,9 @@ def split(rgb: np.ndarray, grid: list[int] | None) -> list[tuple[int, int, np.nd
     cells = []
     for cell in range(cols * rows):
         mine = by_cell.get(cell)
-        if not mine:
-            sys.exit(f"grid cell {cell} is empty — check the grid size in the manifest")
+        if not mine:                       # an empty panel (list it as null in "frames")
+            cells.append((0, 0, None))
+            continue
         ys, xs = np.nonzero(np.logical_or.reduce(mine))
         pad = 6
         y0, y1 = max(0, ys.min() - pad), min(h, ys.max() + pad + 1)
@@ -289,6 +293,8 @@ def main(manifest_path: Path) -> None:
         for k, ((x0, y0, crop), fid) in enumerate(zip(split(rgb, src.get("grid")), ids_here)):
             if fid is None:
                 continue
+            if crop is None:
+                sys.exit(f"{src['file']}: panel {k + 1} is empty but is listed as {fid}")
             row = k // src["grid"][0] if src.get("grid") else 0
             rgba = cut_out(crop)
             if src.get("floorLines"):
@@ -372,6 +378,14 @@ def main(manifest_path: Path) -> None:
                     scale[f] = sheet_scale
     # "scaleAdjust": a manual factor for sheets the measurements misjudge (e.g. bangs hiding the
     # face in a hanging pose); tuned by eye against a neighbouring sheet.
+    # "uniform": a cycle (running) must keep the size and rise/fall the artist drew between its frames,
+    # so the whole sheet shares one scale — the median of its frames' individual scales.
+    for src, frames in sources:
+        if src.get("uniform"):
+            k = float(np.median([scale[f] for f, _, _ in frames if f in scale]))
+            for f, _, _ in frames:
+                scale[f] = k
+
     # "frameScale": the same, per frame (a few panels drawn with a smaller head than their neighbours).
     for src, frames in sources:
         for f, _, _ in frames:
@@ -388,13 +402,19 @@ def main(manifest_path: Path) -> None:
               for spec in cfg.get("pins", {}).values() for fid in expand(spec["frames"])}
     cells, ids = [], []
     for src, frames in sources:
-        floor = {}
+        airborne = set(expand(src.get("airborne", [])))
+        floor, any_floor = {}, {}
         for fid, _, m in frames:
-            if fid not in src.get("airborne", []):
+            any_floor[m["row"]] = max(any_floor.get(m["row"], 0), m["bottom"])
+            if fid not in airborne:
                 floor[m["row"]] = max(floor.get(m["row"], 0), m["bottom"])
         for fid, rgba, m in frames:
-            ground = floor.get(m["row"], m["bottom"]) if fid in src.get("airborne", []) else m["bottom"]
-            cells.append(place(rgba, m, scale[fid], ground, cfg, fid, pinned.get(fid)))
+            # an airborne frame keeps its height above its row's floor line (the lowest foot in the
+            # row when every frame of a cycle is listed)
+            ground = floor.get(m["row"], any_floor[m["row"]]) if fid in airborne else m["bottom"]
+            # "raise": {frame: px} lifts a grounded frame off the floor (a flight pose drawn standing)
+            lift = src.get("raise", {}).get(fid, 0)
+            cells.append(place(rgba, m, scale[fid], ground + lift / scale[fid], cfg, fid, pinned.get(fid)))
             ids.append(fid)
     if len(set(ids)) != len(ids):
         sys.exit("duplicate frame ids in manifest")
@@ -465,6 +485,7 @@ def main(manifest_path: Path) -> None:
         "poses": {k: index[v] for k, v in cfg["poses"].items()},
         "walkFacing": cfg.get("walkFacing", "right"),   # which way the walk frames face as drawn
         "rollFacing": cfg.get("rollFacing", "left"),    # which way the roll moves as drawn
+        "runFacing": cfg.get("runFacing", "left"),      # which way the run frames face as drawn
         "animations": animations,
         "spin": spin,
         "pins": pins,

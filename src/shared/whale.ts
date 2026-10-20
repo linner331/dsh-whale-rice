@@ -13,13 +13,19 @@
  */
 import type { Activity } from './feed.ts'
 import type { RegionSource } from './region.ts'
-import { anim, CELL, PIN, POSE, ROLL_FACING, SPIN, Sprite, WALK_FACING, type AnimName, type Steps } from './sprite.ts'
+import { anim, animDuration, CELL, PIN, POSE, ROLL_FACING, RUN_FACING, SPIN, Sprite, WALK_FACING, type AnimName, type Steps } from './sprite.ts'
 import { Emotion, type EmotionEvent, type Mood } from './emotion.ts'
 import { Flight, Pendulum, PointerVelocity } from './toss.ts'
 
 const SCALE = 0.42
 const W = CELL.w * SCALE, H = CELL.h * SCALE
-const WALK_SPEED = 55                    // px per second
+const GAITS = {
+  walk: { anim: 'walk', speed: 55, facing: WALK_FACING, bob: 0 },
+  run:  { anim: 'run', speed: 150, facing: RUN_FACING, bob: 0 },   // bob: extra px of bounce per stride (the frames carry their own)
+} as const
+type Gait = keyof typeof GAITS
+const RUN_WHEN_HAPPY = 0.6               // chance to run instead of walk when she is in a good mood
+const RUN_ANYWAY = 0.12                  // …and when she isn't
 const ROLL_TURNS = 1                     // full turns of the ball per somersault
 const QUARTER_MS = 170                   // time per quarter turn (one drawn angle)
 const ROLL_DISTANCE = ROLL_TURNS * 2 * Math.PI * SPIN.radius * SCALE   // wheel: distance = angle × radius
@@ -287,34 +293,40 @@ export class Whale {
       if (!this.reducedMotion && Math.random() < 0.55) {
         if (Math.random() < ROLL_CHANCE && this.roll()) return
         const r = this.regions.rect()
-        return this.walkTo(r.left + Math.random() * Math.max(0, r.width - W), r.top + Math.random() * Math.max(0, r.height - H))
+        const happy = this.emotion.valence >= 0.15
+        const gait: Gait = Math.random() < (happy ? RUN_WHEN_HAPPY : RUN_ANYWAY) ? 'run' : 'walk'
+        return this.walkTo(r.left + Math.random() * Math.max(0, r.width - W), r.top + Math.random() * Math.max(0, r.height - H), gait)
       }
       void this.runReaction({ anim: IDLE_GESTURES[Math.floor(Math.random() * IDLE_GESTURES.length)] })
     }, 6000 + Math.random() * 8000)
   }
 
-  private walkTo(tx: number, ty: number): void {
+  private walkTo(tx: number, ty: number, gait: Gait = 'walk'): void {
     const { token } = this.begin('walking')
+    const g = GAITS[gait]
     const from = { ...this.pos }
     const dist = Math.hypot(tx - from.x, ty - from.y)
     if (dist < 4) return this.toIdle()
-    // Mirror the walk frames when she heads the other way from how they were drawn.
+    // Mirror the frames when she heads the other way from how they were drawn.
     const goingLeft = tx < from.x
-    this.root.classList.toggle('wr-flip', WALK_FACING === 'left' ? !goingLeft : goingLeft)
-    void (async () => { while (await this.play(token, anim('walk'))) { /* keep stepping */ } })()
-    const duration = (dist / WALK_SPEED) * 1000
+    this.root.classList.toggle('wr-flip', g.facing === 'left' ? !goingLeft : goingLeft)
+    void (async () => { while (await this.play(token, anim(g.anim))) { /* keep stepping */ } })()
+    const duration = (dist / g.speed) * 1000
+    const stride = animDuration(g.anim) / 2           // two leaps per cycle
     const t0 = performance.now()
     const frame = (now: number): void => {
       if (!this.alive(token)) return
       const t = Math.min(1, (now - t0) / duration)
       this.pos.x = from.x + (tx - from.x) * t
       this.pos.y = from.y + (ty - from.y) * t
-      this.render(0)
+      // A bouncy gait rises once per stride, in step with the drawn leaps.
+      this.render(g.bob * Math.abs(Math.sin((Math.PI * (now - t0)) / stride)))
       if (t < 1) this.raf = requestAnimationFrame(frame)
       else this.toIdle()
     }
     this.raf = requestAnimationFrame(frame)
   }
+
 
   /** Somersault sideways (given or random direction) if the region has room; false if she can't. */
   roll(direction?: 'left' | 'right'): boolean {

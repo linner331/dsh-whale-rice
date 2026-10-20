@@ -4,9 +4,9 @@
     "meta": "assets/sprites/whale.json",
     "preview": "art/previews/atlas.png"
   },
-  "cell": { "w": 500, "h": 420 },
+  "cell": { "w": 560, "h": 420 },
   "columns": 8,
-  "anchor": { "x": 225, "y": 404 },
+  "anchor": { "x": 285, "y": 404 },
   "bodyHeight": 300,
   "faceMatch": 1.0,
 
@@ -57,7 +57,12 @@
       "frames": ["sulk-back-1", "sulk-back-2", "sulk-peek", "sulk-hmph", "wary-rub", "wary-glare", "smug-hop", "smug-pose",
                  "gloom-1", "gloom-2", "expect-1", "expect-2", "praised", null, "sleepy-yawn", "dizzy"],
       "standing": ["sulk-hmph", "wary-rub", "wary-glare", "smug-pose", "expect-1", "expect-2", "praised", "sleepy-yawn", "dizzy"],
-      "airborne": ["smug-hop"], "mainOnly": ["sulk-back-2", "smug-hop"] }
+      "airborne": ["smug-hop"], "mainOnly": ["sulk-back-2", "smug-hop"] },
+
+    { "file": "batch5/run-walkbased.png", "grid": [2, 2],
+      "frames": ["run-1", "run-2", "run-3", "run-4"],
+      "uniform": true, "raise": { "run-2": 10, "run-4": 10 },
+      "scaleMatch": { "frame": "run-1", "to": "walk-1", "by": "face" } }
   ],
 
   "spin": { "frames": ["sault-ball-0", "sault-ball-90", "sault-ball-180", "sault-ball-270"] },
@@ -65,11 +70,12 @@
   "pins": {
     "grab": { "frames": ["lift-up", "lift-tilt", "hang-1..hang-4", "kick-1..kick-4", "flail-1..flail-4", "wiggle-1..wiggle-4",
                          "tired-1", "tired-2", "tired-3"],
-              "x": 150, "y": 40, "faceX": 180, "headTop": 48 }
+              "x": 210, "y": 40, "faceX": 240, "headTop": 48 }
   },
 
   "walkFacing": "left",
   "rollFacing": "left",
+  "runFacing": "left",
 
   "poses": {
     "rest": "eat-done",
@@ -86,6 +92,7 @@
     "poke":      { "frames": ["eat-more"], "ms": 1100, "hold": 400 },
 
     "walk":      { "frames": ["walk-1", "walk-2", "walk-3", "walk-4"], "ms": 170 },
+    "run":       { "frames": ["run-1", "run-2", "run-3", "run-4"], "ms": 110 },
 
     "idle_look":  { "frames": ["idle-look"], "ms": 2200 },
     "idle_tap":   { "frames": ["idle-tap", "eat-done", "idle-tap", "eat-done", "idle-tap"], "ms": [300, 250, 300, 250, 900] },

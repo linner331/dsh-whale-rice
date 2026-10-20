@@ -28,6 +28,8 @@
   <button id="long">长任务完成（cheer）</button>
   <button id="spend">余额变少（回复结束）</button>
   <button id="topup">余额变多 ¥10</button>
+  <button id="runL">向左跑</button>
+  <button id="runR">向右跑</button>
   <button id="rollL">向左打滚</button>
   <button id="rollR">向右打滚</button>
   <button id="unload">卸载插件</button>
@@ -78,6 +80,10 @@
   document.getElementById('topup').onclick = async () => { await call('/dev/topup'); await call('/dev/turn-end'); log('topped up') }
   // The page is opened with ?whale-debug so the client exposes window.__whale.
   if (!location.search.includes('whale-debug')) history.replaceState(null, '', '?whale-debug')
+  // Dev-only: drive the (private) gait directly to see the run without waiting for a good mood.
+  const runTo = (side) => { const w = window.__whale, r = w.regions.rect(); w.walkTo(side === 'left' ? r.left : r.right - 235, w.pos.y, 'run'); log('run ' + side) }
+  document.getElementById('runL').onclick = () => runTo('left')
+  document.getElementById('runR').onclick = () => runTo('right')
   document.getElementById('rollL').onclick = () => log(window.__whale?.roll('left') ? 'roll left' : 'no room to the left')
   document.getElementById('rollR').onclick = () => log(window.__whale?.roll('right') ? 'roll right' : 'no room to the right')
   document.getElementById('unload').onclick = () => { disposers.splice(0).forEach(d => d()); log('unloaded') }
