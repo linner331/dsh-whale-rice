@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace WhaleOverlay
 {
@@ -103,6 +104,20 @@ namespace WhaleOverlay
         [DllImport("user32.dll")]
         public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
 
+        public delegate bool WindowEnumProc(IntPtr hwnd, IntPtr data);
+
+        [DllImport("user32.dll")]
+        public static extern bool EnumWindows(WindowEnumProc proc, IntPtr data);
+
+        [DllImport("user32.dll")]
+        public static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
+
+        [DllImport("user32.dll")]
+        public static extern bool IsWindow(IntPtr hwnd);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        public static extern int GetClassName(IntPtr hwnd, StringBuilder name, int capacity);
+
         [DllImport("kernel32.dll")]
         public static extern uint GetCurrentThreadId();
 
@@ -162,6 +177,22 @@ namespace WhaleOverlay
         public static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint colorKey, byte alpha, uint flags);
 
         public const uint LWA_ALPHA = 0x00000002;
+
+        // Limit both host and WebView renderer HWNDs to painted content so Explorer receives
+        // desktop icon clicks outside the whale.
+        [DllImport("gdi32.dll", SetLastError = true)]
+        public static extern IntPtr CreateRectRgn(int left, int top, int right, int bottom);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        public static extern int CombineRgn(IntPtr destination, IntPtr first, IntPtr second, int mode);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        public static extern bool DeleteObject(IntPtr handle);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern int SetWindowRgn(IntPtr hwnd, IntPtr region, bool redraw);
+
+        public const int RGN_OR = 2;
 
         [DllImport("shcore.dll")]
         public static extern int GetDpiForMonitor(IntPtr monitor, int dpiType, out uint dpiX, out uint dpiY);

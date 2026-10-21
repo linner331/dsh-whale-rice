@@ -84,7 +84,12 @@ export class Whale {
   private readonly reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
   private unbindWindow: (() => void) | undefined
 
-  constructor(private readonly layer: HTMLElement, imageUrl: string, private readonly regions: RegionSource) {
+  constructor(
+    private readonly layer: HTMLElement,
+    imageUrl: string,
+    private readonly regions: RegionSource,
+    private readonly pointerOffset: () => { x: number; y: number } = () => ({ x: 0, y: 0 }),
+  ) {
     this.root.className = 'wr-whale wr-idle'
     const inner = document.createElement('div')
     inner.className = 'wr-sprite'
@@ -492,21 +497,26 @@ export class Whale {
 
   private bindPointer(): void {
     let start: { x: number; y: number } | null = null
+    const point = (e: PointerEvent) => {
+      const offset = this.pointerOffset()
+      return { x: e.clientX + offset.x, y: e.clientY + offset.y }
+    }
     this.root.addEventListener('pointerdown', e => {
       if (this.mode === 'editing') return
-      start = { x: e.clientX, y: e.clientY }
+      start = point(e)
       this.root.setPointerCapture(e.pointerId)
       e.preventDefault()
     })
     this.root.addEventListener('pointermove', e => {
       if (!start) return
+      const p = point(e)
       if (!this.held) {
-        if (Math.hypot(e.clientX - start.x, e.clientY - start.y) < 5) return
-        this.grab(e.clientX, e.clientY)
+        if (Math.hypot(p.x - start.x, p.y - start.y) < 5) return
+        this.grab(p.x, p.y)
       }
-      this.held!.px = e.clientX
-      this.held!.py = e.clientY
-      this.held!.velocity.add(e.clientX, e.clientY)
+      this.held!.px = p.x
+      this.held!.py = p.y
+      this.held!.velocity.add(p.x, p.y)
     })
     const up = (): void => {
       if (!start) return

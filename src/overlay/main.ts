@@ -28,12 +28,20 @@ const send = (body: unknown): void => {
   window.chrome?.webview?.postMessage(body)
 }
 
-// The Windows helper reads Escape from a low-level hook (it never takes the foreground) and forwards
-// it here, so the picker behaves the same as it does on macOS.
+// The Windows helper forwards Escape and the native frame origin. The latter lets the page keep
+// monitor coordinates if the window's initial 1x1 frame or a display change moves it.
+let frameX = 0
+let frameY = 0
 window.chrome?.webview?.addEventListener?.('message', (event) => {
-  const data = event.data as { type?: unknown; key?: unknown } | null
+  const data = event.data as { type?: unknown; key?: unknown; x?: unknown; y?: unknown } | null
   if (data?.type === 'key' && typeof data.key === 'string') {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: data.key }))
+  }
+  if (data?.type === 'frame' && typeof data.x === 'number' && typeof data.y === 'number') {
+    frameX = data.x
+    frameY = data.y
+    const layer = document.querySelector<HTMLElement>('.wr-layer')
+    if (layer) layer.style.transform = `translate(${-frameX}px, ${-frameY}px)`
   }
 })
 
@@ -59,6 +67,10 @@ style.textContent = `${css}\nhtml, body { margin: 0; background: transparent; ov
 document.head.append(style)
 const layer = document.createElement('div')
 layer.className = 'wr-layer'
+// The WebView starts at 1x1; keep the pet's layout in monitor space during startup.
+Object.assign(layer.style, {
+  width: `${screen.w}px`, height: `${screen.h}px`, right: 'auto', bottom: 'auto',
+})
 document.body.append(layer)
 
 let state: WhaleState | null = null
@@ -102,7 +114,7 @@ source.onerror = () => { nativeLog('state stream lost'); whale?.setActivity('idl
 
 function syncWhale(prev: WhaleState | null): void {
   if (hostsWhale() && !whale) {
-    whale = new Whale(layer, api(`/assets/${ATLAS}`), regions)
+    whale = new Whale(layer, api(`/assets/${ATLAS}`), regions, () => ({ x: frameX, y: frameY }))
   } else if (!hostsWhale() && whale) {
     whale.dispose()
     whale = null
@@ -127,15 +139,17 @@ function openPicker(): HTMLElement {
     + '<div class="wr-picker-box" hidden></div>'
   const box = el.querySelector<HTMLElement>('.wr-picker-box')!
   let start: { x: number; y: number } | null = null
+  const point = (e: PointerEvent) => ({ x: e.clientX + frameX, y: e.clientY + frameY })
   const rect = (e: PointerEvent) => {
-    const x = Math.min(start!.x, e.clientX), y = Math.min(start!.y, e.clientY)
-    return { x, y, w: Math.abs(e.clientX - start!.x), h: Math.abs(e.clientY - start!.y) }
+    const p = point(e)
+    const x = Math.min(start!.x, p.x), y = Math.min(start!.y, p.y)
+    return { x, y, w: Math.abs(p.x - start!.x), h: Math.abs(p.y - start!.y) }
   }
   const cancel = () => void post('/edit', { on: false })
 
   el.addEventListener('pointerdown', e => {
     if (e.button !== 0) return
-    start = { x: e.clientX, y: e.clientY }
+    start = point(e)
     el.setPointerCapture(e.pointerId)
     box.hidden = false
   })
@@ -165,12 +179,19 @@ function openPicker(): HTMLElement {
 
 let lastHit = ''
 setInterval(() => {
-  const rects = whale ? [whale.hitRect()].map(r => [r.x, r.y, r.width, r.height].map(Math.round)) : []
+  // Rectangles go out in monitor coordinates, including any native frame offset.
+  const monitorRect = (r: DOMRect): number[] =>
+    [r.x + frameX, r.y + frameY, r.width, r.height].map(Math.round)
+  const rects = whale ? [monitorRect(whale.hitRect())] : []
+  const visibleRects = whale
+    ? [whale.root, ...Array.from(whale.root.querySelectorAll<HTMLElement>('.wr-bubble'))]
+        .map(el => monitorRect(el.getBoundingClientRect()))
+    : []
   // `capture` = the overlay must keep the mouse; `editing` = the region picker owns the keyboard too.
   const editing = picker !== null
   const capture = editing || (whale?.interacting ?? false)
-  const hit = JSON.stringify({ rects, capture, editing })
+  const hit = JSON.stringify({ rects, visibleRects, capture, editing })
   if (hit === lastHit) return
   lastHit = hit
-  send({ type: 'hit', rects, capture, editing })
+  send({ type: 'hit', rects, visibleRects, capture, editing })
 }, 16)
