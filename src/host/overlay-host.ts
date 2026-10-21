@@ -20,6 +20,7 @@ const LIB_DIR = new URL('./', import.meta.url)          // lib/ at runtime
 const ASSET_DIR = new URL('../assets/sprites/', import.meta.url)
 const HELPER_NAME = process.platform === 'win32' ? 'whale-overlay.exe' : 'whale-overlay'
 const HELPER = new URL(HELPER_NAME, LIB_DIR)
+const TREASURE_DIR = new URL('../assets/treasure/', import.meta.url)
 const STORE = join(homedir(), '.dsh', 'whale-rice', 'overlay.json')
 const LOG = join(homedir(), '.dsh', 'whale-rice', 'overlay.log')
 const MAX_RESTARTS = 3
@@ -28,6 +29,8 @@ const FILES: Record<string, [URL, string]> = {
   '/': [new URL('overlay.html', LIB_DIR), 'text/html; charset=utf-8'],
   '/overlay.js': [new URL('overlay.js', LIB_DIR), 'text/javascript; charset=utf-8'],
   '/assets/whale.webp': [new URL('whale.webp', ASSET_DIR), 'image/webp'],
+  ...Object.fromEntries(['items', 'beach', 'glass-crack', 'glass-rim', 'hole-mask', 'glass-shards']
+    .map(name => [`/assets/treasure/${name}.webp`, [new URL(`${name}.webp`, TREASURE_DIR), 'image/webp']])),
 }
 
 export class OverlayHost {
@@ -41,7 +44,7 @@ export class OverlayHost {
   private stopped = false
   private readonly token = randomBytes(24).toString('hex')
 
-  constructor(private readonly hub: Hub) {}
+  constructor(private readonly hub: Hub, private readonly dive: (body: unknown) => [status: number, body: unknown]) {}
 
   static supported(): boolean {
     return (process.platform === 'darwin' || process.platform === 'win32') && existsSync(HELPER)
@@ -129,6 +132,10 @@ export class OverlayHost {
       this.hub.emit()
       return void res.writeHead(204).end()
     }
+    if (req.method === 'POST' && url.pathname === '/dive') {
+      const [status, body] = this.dive(await readJson(req))
+      return void res.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(body))
+    }
     if (req.method === 'POST' && url.pathname === '/region') {
       const r = await readJson(req) as Partial<ScreenRect>
       if (![r.x, r.y, r.w, r.h].every(v => typeof v === 'number' && Number.isFinite(v)) || r.w! < 80 || r.h! < 80) {
@@ -144,7 +151,7 @@ export class OverlayHost {
   }
 }
 
-async function readJson(req: IncomingMessage): Promise<unknown> {
+export async function readJson(req: IncomingMessage): Promise<unknown> {
   let size = 0
   const chunks: Buffer[] = []
   for await (const chunk of req) {

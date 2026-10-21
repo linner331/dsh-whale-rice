@@ -32,6 +32,9 @@
   <button id="runR">向右跑</button>
   <button id="rollL">向左打滚</button>
   <button id="rollR">向右打滚</button>
+  <button id="dive">下海捞宝（不耗鱼饵）</button>
+  <button id="diveL">下海·必出传说</button>
+  <button id="admire">掏一件宝贝看看</button>
   <button id="unload">卸载插件</button>
   <div id="log"></div>
 </aside>
@@ -86,6 +89,10 @@
   document.getElementById('runR').onclick = () => runTo('right')
   document.getElementById('rollL').onclick = () => log(window.__whale?.roll('left') ? 'roll left' : 'no room to the left')
   document.getElementById('rollR').onclick = () => log(window.__whale?.roll('right') ? 'roll right' : 'no room to the right')
+  // Treasure: the real dive (host draws + saves), forced through the dev page's whale.
+  document.getElementById('dive').onclick = () => { window.__whale.dive('any'); log('dive') }
+  document.getElementById('diveL').onclick = () => { window.__whale.dive('legendary'); log('dive legendary') }
+  document.getElementById('admire').onclick = () => { window.__whale.direct('admire', null); log('admire') }
   document.getElementById('unload').onclick = () => { disposers.splice(0).forEach(d => d()); log('unloaded') }
 </script>
 <script src="/lib/client.js"></script>

@@ -72,6 +72,11 @@ export function animFor(name: AnimName, mood: string | null): AnimName {
   return variants[mood] ?? variants[MOOD_FALLBACK[mood] ?? ''] ?? name
 }
 
+/** Whether the sprite sheet has this animation (new actions can ship before their frames). */
+export function hasAnim(name: string): name is AnimName {
+  return name in meta.animations
+}
+
 /** Length of one cycle of a named animation, ms. */
 export function animDuration(name: AnimName): number {
   return meta.animations[name].durations.reduce((a: number, b: number) => a + b, 0)

@@ -9,11 +9,12 @@
  * Acts: run|walk (arg left/right), roll (arg left/right), sleep, oops, full, cheer,
  *       feel (arg: an emotion event, e.g. praise / faceplant), calm,
  *       grab (arg "seconds,vx,vy": hold, then throw with that velocity in px/s),
- *       region (arg "x,y,w,h": her in-app area as fractions of the window).
+ *       region (arg "x,y,w,h": her in-app area as fractions of the window),
+ *       dive (arg: a rarity or an item id; no bait is spent), admire (take a treasure out to look at).
  */
 import { createServer, type Server } from 'node:http'
 
-export const DIRECTOR_ACTS = ['run', 'walk', 'roll', 'sleep', 'oops', 'full', 'cheer', 'feel', 'calm', 'grab', 'region'] as const
+export const DIRECTOR_ACTS = ['run', 'walk', 'roll', 'sleep', 'oops', 'full', 'cheer', 'feel', 'calm', 'grab', 'region', 'dive', 'admire'] as const
 export type DirectorAct = typeof DIRECTOR_ACTS[number]
 export interface DirectorCue { seq: number; act: DirectorAct; arg: string | null }
 

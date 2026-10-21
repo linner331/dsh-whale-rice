@@ -1,6 +1,6 @@
 {
   "image": "whale.webp",
-  "version": "5267c4d4efd1",
+  "version": "82e41e7a3515",
   "cell": {
     "w": 560,
     "h": 420
@@ -110,6 +110,34 @@
     "run-2",
     "run-3",
     "run-4",
+    "smash-draw",
+    "smash-windup",
+    "smash-hit",
+    "smash-rest",
+    "free-1",
+    "free-2",
+    "free-3",
+    "free-4",
+    "away-1",
+    "away-2",
+    "away-3",
+    "away-4",
+    "toward-1",
+    "toward-2",
+    "toward-3",
+    "toward-4",
+    "dive-crouch",
+    "dive-leap",
+    "dive-arc",
+    "dive-down",
+    "surface-rise",
+    "surface-gasp",
+    "surface-shake",
+    "surface-look",
+    "show-chest",
+    "show-up",
+    "show-look",
+    "show-pocket",
     "walk-1@sulk",
     "walk-2@sulk",
     "walk-3@sulk",
@@ -572,6 +600,122 @@
         2000
       ]
     },
+    "smash": {
+      "frames": [
+        99,
+        100,
+        101,
+        102
+      ],
+      "durations": [
+        450,
+        420,
+        650,
+        600
+      ]
+    },
+    "walk_free": {
+      "frames": [
+        103,
+        104,
+        105,
+        106
+      ],
+      "durations": [
+        170,
+        170,
+        170,
+        170
+      ]
+    },
+    "walk_away": {
+      "frames": [
+        107,
+        108,
+        109,
+        110
+      ],
+      "durations": [
+        190,
+        190,
+        190,
+        190
+      ]
+    },
+    "walk_toward": {
+      "frames": [
+        111,
+        112,
+        113,
+        114
+      ],
+      "durations": [
+        190,
+        190,
+        190,
+        190
+      ]
+    },
+    "dive": {
+      "frames": [
+        115,
+        116,
+        117,
+        118
+      ],
+      "durations": [
+        260,
+        160,
+        160,
+        220
+      ]
+    },
+    "surface": {
+      "frames": [
+        119,
+        120,
+        121,
+        122
+      ],
+      "durations": [
+        300,
+        500,
+        550,
+        700
+      ]
+    },
+    "show": {
+      "frames": [
+        123
+      ],
+      "durations": [
+        1800
+      ]
+    },
+    "show_up": {
+      "frames": [
+        124
+      ],
+      "durations": [
+        1800
+      ]
+    },
+    "admire": {
+      "frames": [
+        125
+      ],
+      "durations": [
+        2000
+      ]
+    },
+    "pocket": {
+      "frames": [
+        126
+      ],
+      "durations": [
+        900
+      ]
+    },
     "land_b": {
       "frames": [
         70,
@@ -590,10 +734,10 @@
     },
     "walk@sulk": {
       "frames": [
-        99,
-        100,
-        101,
-        102
+        127,
+        128,
+        129,
+        130
       ],
       "durations": [
         170,
@@ -615,9 +759,9 @@
       43,
       44
     ],
-    "cx": 320.2,
-    "cy": 260.9,
-    "radius": 143.1
+    "cx": 319.2,
+    "cy": 264.2,
+    "radius": 139.8
   },
   "pins": {
     "grab": {

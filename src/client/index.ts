@@ -7,7 +7,8 @@ import css from '../shared/style.css'
 import { feed, type WhaleState } from '../shared/feed.ts'
 import { LocalRegion } from '../shared/region.ts'
 import { ATLAS } from '../shared/sprite.ts'
-import { Whale } from '../shared/whale.ts'
+import { paintTreasure } from '../shared/treasure-art.ts'
+import { Whale, type Diver } from '../shared/whale.ts'
 
 interface ClientContext {
   effect(fn: () => () => void, label?: string): void
@@ -27,7 +28,8 @@ export function apply(ctx: ClientContext): void {
     const layer = document.createElement('div')
     layer.className = 'wr-layer'
     document.body.append(layer)
-    const whale = new Whale(layer, hostUrl(`assets/${ATLAS}`), new LocalRegion(layer))
+    paintTreasure(layer, hostUrl)
+    const whale = new Whale(layer, hostUrl(`assets/${ATLAS}`), new LocalRegion(layer), undefined, dive)
     const stopFollowing = followState(whale, layer)
     // Dev harness hook: ?whale-debug exposes the instance (e.g. window.__whale.roll('left')).
     if (new URLSearchParams(location.search).has('whale-debug')) Object.assign(window, { __whale: whale })
@@ -39,6 +41,16 @@ export function apply(ctx: ClientContext): void {
       style.remove()
     }
   }, `${PLUGIN_ID}: whale overlay`)
+}
+
+const dive: Diver = async (force) => {
+  const res = await fetch(hostUrl('dive'), {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(force ? { force } : {}),
+  })
+  return res.json()
 }
 
 function followState(whale: Whale, layer: HTMLElement): () => void {

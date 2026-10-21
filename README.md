@@ -10,6 +10,7 @@ anywhere on any screen; elsewhere she stays inside the DSH window.
 - **Balance on hover**: with an API key configured, the host reads `GET https://api.deepseek.com/user/balance` and the tooltip shows the current balance. Nothing is shown when it can't be read (e.g. DeepSeek-account sign-in), and per-reply costs / top-ups are deliberately not displayed: balance deltas can't be attributed to a single reply reliably.
 - **Desktop mode (macOS, Windows)**: she leaves the DSH window. Double-click her → every screen dims → drag a rectangle on any screen to set her area (Esc / right-click cancels). Saved in `~/.dsh/whale-rice/overlay.json`.
 - **Interactions**: click to poke, drag to carry her (she snaps back inside her area), and she hops around her area on her own.
+- **Treasure diving**: every finished turn earns her a bait (two for a long one, up to 5). Right-click her → 下海捞宝: she smashes a hole in the screen, dives into the sea behind it and comes back up with a random treasure (36 items in 5 rarities, pity at 10 pulls for epic and 50 for legendary). The catch is drawn and saved by the host before the dive is acted out, in `~/.dsh/whale-rice/bag.json`. Right-click → 背包 shows the bag and the collection; pick one and she takes it out to show you. Now and then she takes one out by herself to admire it. Nothing on screen is captured: the glass is drawn, so no permissions are needed.
 
 ## Installation
 
@@ -56,6 +57,8 @@ Director mode (off by default; on in the harness) triggers behaviours that other
 curl 'http://127.0.0.1:8771/?act=run&arg=left'     # run|walk|roll left/right, sleep, oops, full, cheer
 curl 'http://127.0.0.1:8771/?act=grab&arg=5,-650,-450'   # hold 5 s (she struggles), then throw
 curl 'http://127.0.0.1:8771/?act=feel&arg=praise'  # nudge her mood; calm resets it
+curl 'http://127.0.0.1:8771/?act=dive&arg=legendary'   # dive now, no bait spent; arg: a rarity, an item id, or nothing
+curl 'http://127.0.0.1:8771/?act=admire'           # take a treasure out of the bag to look at
 ```
 
 It only listens on 127.0.0.1 and plays the real animations and state machine; only the trigger is manual.

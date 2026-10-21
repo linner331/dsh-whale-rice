@@ -132,3 +132,200 @@
   background: rgb(127 176 255 / 0.18);
   pointer-events: none;
 }
+
+/* ---- treasure: the smashed hole, the menu, the bag and the item card --------------------------- */
+
+.wr-whale { z-index: 2; }
+.wr-whale.wr-gone { visibility: hidden; pointer-events: none; }
+
+.wr-hole {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+/* The seaside through the hole: the beach art, cut to the hole's shape by its mask. */
+.wr-scene {
+  position: absolute;
+  overflow: hidden;
+  opacity: 0;
+  background: var(--wr-beach) center / cover;
+  -webkit-mask: var(--wr-mask) var(--mask-pos) / var(--mask-size) var(--mask-size) no-repeat;
+  mask: var(--wr-mask) var(--mask-pos) / var(--mask-size) var(--mask-size) no-repeat;
+}
+.wr-glass {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: center / 100% 100% no-repeat;
+}
+.wr-glass-crack { background-image: var(--wr-crack); }
+.wr-glass-rim { background-image: var(--wr-rim); }
+.wr-shard {
+  position: absolute;
+  background: var(--wr-shards) var(--cell) / 300% 300% no-repeat;
+}
+.wr-stage { position: absolute; inset: 0; }
+.wr-actor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+.wr-actor.wr-flip .wr-sprite { scale: -1 1; }
+.wr-actor { transition: clip-path 0.5s ease-out; clip-path: inset(-40% -20% -10% -20%); }
+.wr-actor.wr-wading { clip-path: inset(-40% -20% 46% -20%); }
+.wr-actor .wr-sprite { filter: none; }
+.wr-ripple {
+  position: absolute;
+  width: calc(60px * var(--k));
+  height: calc(16px * var(--k));
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1.5px solid rgb(255 255 255 / 0.9);
+  animation: wr-ripple 1.4s ease-out forwards;
+}
+@keyframes wr-ripple { from { scale: 0.2; opacity: 1; } to { scale: 1.6; opacity: 0; } }
+.wr-splash {
+  position: absolute;
+  width: calc(34px * var(--k));
+  height: calc(40px * var(--k));
+  translate: -50% -100%;
+  border-radius: 50% 50% 40% 40%;
+  background: radial-gradient(ellipse at 50% 100%, #fff 35%, rgb(220 245 255 / 0.7) 60%, transparent 72%);
+  transform-origin: 50% 100%;
+  animation: wr-splash 0.6s ease-out forwards;
+}
+@keyframes wr-splash { from { scale: 0.3 0.2; opacity: 1; } 40% { scale: 1 1; opacity: 1; } to { scale: 1.2 0.3; opacity: 0; } }
+.wr-spray {
+  position: absolute;
+  width: calc(5px * var(--k) + 2px);
+  height: calc(5px * var(--k) + 2px);
+  border-radius: 50%;
+  background: #fff;
+}
+.wr-bubble-air {
+  position: absolute;
+  width: calc(7px * var(--k) + 3px);
+  height: calc(7px * var(--k) + 3px);
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1.5px solid rgb(255 255 255 / 0.95);
+  background: rgb(255 255 255 / 0.2);
+  animation: wr-pop-up 0.9s ease-out forwards;
+}
+@keyframes wr-pop-up { from { scale: 0.2; opacity: 0; } 40% { scale: 1; opacity: 1; } to { scale: 1.3; opacity: 0; } }
+.wr-drop {
+  position: absolute;
+  z-index: 3;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff, #8fd6ff 55%, rgb(40 140 210 / 0.6));
+  pointer-events: none;
+}
+.wr-drop.wr-stain { background: radial-gradient(circle at 35% 35%, rgb(255 255 255 / 0.9), rgb(143 214 255 / 0.35) 60%, transparent); }
+.wr-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--rarity), transparent 70%);
+}
+
+.wr-icon {
+  width: var(--size);
+  height: var(--size);
+  flex: none;
+  background: var(--wr-items) var(--at) / var(--sheet) auto no-repeat;
+}
+.wr-r-epic.wr-icon, .wr-r-legendary.wr-icon { filter: drop-shadow(0 0 5px var(--rarity)); }
+.wr-icon.wr-unknown { filter: brightness(0) opacity(0.18); }
+.wr-slot, .wr-card { --tile: color-mix(in srgb, var(--rarity, #c9d1e0) 30%, #fff); }
+.wr-slot:not(:disabled) { box-shadow: inset 0 0 0 2px var(--tile); }
+/* Still a mystery: a glowing orb over her head until she is back out of the hole. */
+.wr-held-item.wr-mystery {
+  border-radius: 50%;
+  background: none;
+  scale: 0.6;
+  filter: none;
+  background: radial-gradient(circle, #fff 30%, color-mix(in srgb, var(--rarity) 60%, #fff) 60%, transparent 72%);
+  box-shadow: 0 0 16px 6px color-mix(in srgb, var(--rarity) 70%, #fff);
+}
+.wr-held-item {
+  position: absolute;
+  left: 50%;
+  top: 6%;
+  translate: -50% 0;
+  pointer-events: none;
+  animation: wr-hold 1.6s ease-in-out infinite;
+}
+@keyframes wr-hold { 50% { transform: translateY(-4px); } }
+/* Where her hands are in each holding pose (cell-relative, tuned on the drawn frames). */
+.wr-held-item[data-hold='up'] { top: -4%; }
+.wr-held-item[data-hold='chest'] { top: 53%; }
+.wr-held-item[data-hold='face'] { top: 41%; }
+
+.wr-menu, .wr-bag, .wr-card {
+  position: absolute;
+  z-index: 4;
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.97);
+  color: #1c3a7a;
+  font: 13px/1.45 system-ui, sans-serif;
+  box-shadow: 0 6px 24px rgb(10 30 80 / 0.25);
+  user-select: none;
+}
+.wr-menu { display: flex; flex-direction: column; padding: 6px; gap: 2px; min-width: 170px; }
+.wr-menu button, .wr-bag-head button {
+  font: 600 13px system-ui, sans-serif;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  white-space: pre;
+}
+.wr-menu button:hover:not(:disabled), .wr-bag-head button:hover { background: #e9f0fc; }
+.wr-menu button:disabled { color: #9aa6bd; cursor: default; }
+.wr-menu-why { padding: 2px 10px 4px; font-size: 11.5px; color: #6b7a96; }
+
+.wr-bag { width: 300px; padding: 8px 10px 10px; }
+.wr-bag-head { display: flex; align-items: center; gap: 2px; margin-bottom: 6px; }
+.wr-bag-head button.wr-on { background: #dfe9fb; }
+.wr-bag-head .wr-bag-close { margin-left: auto; padding: 4px 9px; font-size: 16px; }
+.wr-bag-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 260px; overflow-y: auto; }
+.wr-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 10px;
+  background: #f3f6fb;
+  cursor: pointer;
+  padding: 0;
+}
+.wr-slot:hover:not(:disabled) { background: #e3ecfb; }
+.wr-slot:disabled { cursor: default; }
+.wr-count { position: absolute; right: 3px; bottom: 1px; font: 700 10.5px system-ui, sans-serif; color: #2a4e9e; }
+.wr-bag-empty { grid-column: 1 / -1; padding: 16px 4px; text-align: center; color: #6b7a96; }
+.wr-bag-foot { margin-top: 8px; font-size: 11.5px; color: #6b7a96; }
+
+.wr-card {
+  display: flex;
+  gap: 12px;
+  width: 280px;
+  padding: 12px;
+  border: 2px solid var(--rarity);
+  cursor: pointer;
+  animation: wr-card-in 0.25s ease-out;
+}
+@keyframes wr-card-in { from { opacity: 0; transform: translateY(8px) scale(0.96); } }
+.wr-card-body { min-width: 0; }
+.wr-card-title { font: 700 15px system-ui, sans-serif; display: flex; align-items: center; gap: 6px; }
+.wr-new { font: 800 10px system-ui, sans-serif; color: #fff; background: #e8505b; border-radius: 4px; padding: 1px 4px; }
+.wr-card-rarity { display: inline-block; margin: 2px 0 4px; padding: 0 6px; border-radius: 4px; font-size: 11.5px; font-weight: 700; background: color-mix(in srgb, var(--rarity) 25%, #fff); }
+.wr-card-desc { color: #33466e; }
+.wr-card-meta { margin-top: 6px; font-size: 11.5px; color: #6b7a96; }

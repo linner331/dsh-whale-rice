@@ -26,7 +26,7 @@ final class ScreenOverlay: NSObject, WKScriptMessageHandler, WKNavigationDelegat
   var hitRects: [CGRect] = []
   var capture = false
 
-  init(screen: NSScreen, baseURL: URL, mainHeight: CGFloat) {
+  init(screen: NSScreen, baseURL: URL, mainHeight: CGFloat, allScreens: String) {
     let frame = screen.frame
     panel = OverlayPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
     panel.isOpaque = false
@@ -54,6 +54,8 @@ final class ScreenOverlay: NSObject, WKScriptMessageHandler, WKNavigationDelegat
     comps.queryItems = (comps.queryItems ?? []) + [
       URLQueryItem(name: "sx", value: "\(Int(frame.minX))"), URLQueryItem(name: "sy", value: "\(Int(top))"),
       URLQueryItem(name: "sw", value: "\(Int(frame.width))"), URLQueryItem(name: "sh", value: "\(Int(frame.height))"),
+      // Every connected screen, so a region left on an unplugged one can be noticed.
+      URLQueryItem(name: "screens", value: allScreens),
     ]
     web.load(URLRequest(url: comps.url!))
     panel.orderFrontRegardless()
@@ -111,7 +113,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   func build() {
     overlays.forEach { $0.close() }
     let mainHeight = NSScreen.screens.first?.frame.height ?? 0
-    overlays = NSScreen.screens.map { ScreenOverlay(screen: $0, baseURL: baseURL, mainHeight: mainHeight) }
+    let all = NSScreen.screens.map { s in
+      let f = s.frame
+      return "\(Int(f.minX)),\(Int(mainHeight - f.maxY)),\(Int(f.width)),\(Int(f.height))"
+    }.joined(separator: ";")
+    overlays = NSScreen.screens.map { ScreenOverlay(screen: $0, baseURL: baseURL, mainHeight: mainHeight, allScreens: all) }
   }
 
   var ticks = 0

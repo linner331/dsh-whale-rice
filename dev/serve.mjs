@@ -49,6 +49,7 @@ const ctx = {
 const emit = (event, ...args) => (listeners.get(event) ?? []).forEach(fn => fn(...args))
 
 process.env.DEEPSEEK_API_KEY = 'dev-key'
+process.env.WHALE_RICE_BAG ??= new URL('../dev/.bag.json', import.meta.url).pathname
 const plugin = await import(new URL('lib/index.js', root))
 // DESKTOP=1 also runs the macOS desktop overlay; by default the whale stays in this page.
 // Director mode is on here: curl 'http://127.0.0.1:8771/?act=run&arg=left'

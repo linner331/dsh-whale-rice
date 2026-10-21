@@ -10,3 +10,4 @@ native/windows/bin/
 native/windows/obj/
 native/windows/out/
 *.tgz
+dev/.bag.json

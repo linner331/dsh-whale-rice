@@ -3,14 +3,16 @@
  * - watches session events to know what the agent is doing (eating, taking notes, asking, …)
  * - polls the DeepSeek balance (only with an API key) for the hover tooltip; nothing is guessed
  * - on macOS, runs a desktop overlay so she can roam anywhere on screen (see overlay-host.ts)
- * - serves <base>/whale-rice/state (JSON), /events (SSE) and the sprite sheet under /assets/
+ * - keeps her treasure bag: bait earned per turn, dives drawn and saved here (bag.ts)
+ * - serves <base>/whale-rice/state (JSON), /events (SSE), POST /dive and the sprite sheet under /assets/
  */
 import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { BalanceTracker } from './balance.ts'
-import { ActivityTracker } from './activity.ts'
+import { ActivityTracker, CHEER_AFTER_MS } from './activity.ts'
+import { Bag } from './bag.ts'
 import { Hub } from './hub.ts'
-import { OverlayHost } from './overlay-host.ts'
+import { OverlayHost, readJson } from './overlay-host.ts'
 import { Director } from './director.ts'
 
 export const name = 'whale-rice'
@@ -41,11 +43,14 @@ interface HostContext {
 }
 
 const ROUTE = '/whale-rice'
-const ASSETS = new Map([
-  ['whale.webp', 'image/webp'],
-  ['whale.json', 'application/json'],
+const SPRITES = new URL('../assets/sprites/', import.meta.url)
+const TREASURE = new URL('../assets/treasure/', import.meta.url)
+const ASSETS = new Map<string, [URL, string]>([
+  ['whale.webp', [SPRITES, 'image/webp']],
+  ['whale.json', [SPRITES, 'application/json']],
+  ...['items', 'beach', 'glass-crack', 'glass-rim', 'hole-mask', 'glass-shards']
+    .map(name => [`treasure/${name}.webp`, [TREASURE, 'image/webp']] as [string, [URL, string]]),
 ])
-const ASSET_DIR = new URL('../assets/sprites/', import.meta.url)
 // Billing lands a little after the reply finishes, so refresh the balance twice.
 const AFTER_TURN_DELAYS_MS = [3_000, 15_000]
 
@@ -65,6 +70,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
   }, (config.baseUrl ?? 'https://api.deepseek.com').replace(/\/$/, ''))
 
   const activity = new ActivityTracker()
+  const bag = new Bag()
   let overlay: OverlayHost | undefined
   let director: Director | undefined
   const snapshot = () => ({
@@ -75,14 +81,20 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     region: overlay?.region ?? null,
     editing: overlay?.editing ?? false,
     director: director?.cue ?? null,
+    bag: bag.view(),
   })
   const hub = new Hub(snapshot)
   ctx.effect(() => {
     const unsubscribe = activity.subscribe(hub.emit)
     tracker.onChange = hub.emit
+    bag.onChange = hub.emit
+    activity.onTurnEnd = ms => bag.earn(ms >= CHEER_AFTER_MS ? 2 : 1)
+    void bag.load().then(hub.emit)
     return () => {
       unsubscribe()
       tracker.onChange = undefined
+      bag.onChange = undefined
+      activity.onTurnEnd = undefined
       activity.dispose()
       hub.dispose()
     }
@@ -104,9 +116,19 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     return () => clearInterval(timer)
   }, 'whale-rice: balance poll')
 
+  // A page asks to dive: draw now (the result is saved before any animation), or say why not.
+  // `force` (a rarity or item id, no bait spent) is only honoured in director mode.
+  const dive = (body: unknown): [status: number, body: unknown] => {
+    const asked = (body as { force?: unknown } | null)?.force
+    const force = config.director && typeof asked === 'string' ? asked : undefined
+    if (activity.activity !== 'idle' && !force) return [409, { refused: 'working' }]
+    const result = bag.dive(force)
+    return typeof result === 'string' ? [409, { refused: result }] : [200, result]
+  }
+
   if (config.desktop !== false && OverlayHost.supported()) {
     ctx.effect(() => {
-      const host = new OverlayHost(hub)
+      const host = new OverlayHost(hub, dive)
       overlay = host
       void host.start()
       return () => { host.stop(); overlay = undefined }
@@ -135,8 +157,12 @@ export function apply(ctx: HostContext, config: Config = {}): void {
         // Host/Origin fence + browser-session auth, same as the shipped host routes.
         const rejection = connection.requestRejection(req)
         if (rejection !== undefined) return void res.writeHead(rejection).end()
-        if (req.method !== 'GET' && req.method !== 'HEAD') return void res.writeHead(405, { Allow: 'GET, HEAD' }).end()
         const path = new URL(req.url ?? '/', 'http://localhost').pathname.slice(ROUTE.length)
+        if (req.method === 'POST' && path === '/dive') {
+          const [status, body] = dive(await readJson(req).catch(() => ({})))
+          return sendJson(res, body, status)
+        }
+        if (req.method !== 'GET' && req.method !== 'HEAD') return void res.writeHead(405, { Allow: 'GET, HEAD, POST' }).end()
         if (path === '/state') return sendJson(res, snapshot())
         if (path === '/events') return hub.open(req, res)
         if (path.startsWith('/assets/')) return sendAsset(req, res, path.slice('/assets/'.length))
@@ -146,15 +172,16 @@ export function apply(ctx: HostContext, config: Config = {}): void {
   })
 }
 
-function sendJson(res: ServerResponse, body: unknown): void {
+function sendJson(res: ServerResponse, body: unknown, status = 200): void {
   const text = JSON.stringify(body)
-  res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(text)
+  res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(text)
 }
 
 async function sendAsset(req: IncomingMessage, res: ServerResponse, file: string): Promise<void> {
-  const type = ASSETS.get(file)
-  if (!type) return void res.writeHead(404).end()
-  const bytes = await readFile(new URL(file, ASSET_DIR))
+  const asset = ASSETS.get(file)
+  if (!asset) return void res.writeHead(404).end()
+  const [dir, type] = asset
+  const bytes = await readFile(new URL(file.replace(/^treasure\//, ''), dir))
   // Only content-hashed URLs (…?v=<hash>) may be cached forever; anything else is revalidated.
   const versioned = new URL(req.url ?? '/', 'http://localhost').searchParams.has('v')
   const cache = versioned ? 'public, max-age=31536000, immutable' : 'no-cache'

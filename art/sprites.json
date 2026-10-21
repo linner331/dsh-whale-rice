@@ -63,7 +63,23 @@
     { "file": "batch5/run-walkbased.png", "grid": [2, 2],
       "frames": ["run-1", "run-2", "run-3", "run-4"],
       "uniform": true, "raise": { "run-2": 10, "run-4": 10 },
-      "scaleMatch": { "frame": "run-1", "to": "walk-1", "by": "face" } }
+      "scaleMatch": { "frame": "run-1", "to": "walk-1", "by": "face" } },
+
+    { "file": "batch6/smash-up.png", "grid": [2, 2],
+      "frames": ["smash-draw", "smash-windup", "smash-hit", "smash-rest"],
+      "standing": ["smash-draw", "smash-rest"] },
+    { "file": "batch6/walk-free.png", "grid": [2, 2], "frames": ["free-1", "free-2", "free-3", "free-4"] },
+    { "file": "batch6/walk-away.png", "grid": [2, 2], "frames": ["away-1", "away-2", "away-3", "away-4"],
+      "standing": [], "anchor": "body", "scaleMatch": { "frame": "away-1", "to": "free-1" } },
+    { "file": "batch6/walk-toward.png", "grid": [2, 2], "frames": ["toward-1", "toward-2", "toward-3", "toward-4"] },
+    { "file": "batch6/dive.png", "grid": [2, 2],
+      "frames": ["dive-crouch", "dive-leap", "dive-arc", "dive-down"],
+      "standing": [], "airborne": ["dive-leap", "dive-arc", "dive-down"], "anchor": "body",
+      "scaleMatch": { "frame": "dive-crouch", "to": "walk-1", "by": "face" } },
+    { "file": "batch6/surface.png", "grid": [2, 2],
+      "frames": ["surface-rise", "surface-gasp", "surface-shake", "surface-look"] },
+    { "file": "batch6/show.jpeg", "grid": [2, 2],
+      "frames": ["show-chest", "show-up", "show-look", "show-pocket"] }
   ],
 
   "faces": [
@@ -144,6 +160,17 @@
     "tired":     { "frames": ["tired-1", "tired-2", "tired-3", "tired-2"], "ms": [600, 500, 700, 500] },
 
     "land_a":    { "frames": ["land-crouch", "land-ta-da", "land-proud"], "ms": [170, 900, 700], "hold": 1300 },
+    "smash":     { "frames": ["smash-draw", "smash-windup", "smash-hit", "smash-rest"], "ms": [450, 420, 650, 600] },
+    "walk_free": { "frames": ["free-1", "free-2", "free-3", "free-4"], "ms": 170 },
+    "walk_away": { "frames": ["away-1", "away-2", "away-3", "away-4"], "ms": 190 },
+    "walk_toward": { "frames": ["toward-1", "toward-2", "toward-3", "toward-4"], "ms": 190 },
+    "dive":      { "frames": ["dive-crouch", "dive-leap", "dive-arc", "dive-down"], "ms": [260, 160, 160, 220] },
+    "surface":   { "frames": ["surface-rise", "surface-gasp", "surface-shake", "surface-look"], "ms": [300, 500, 550, 700] },
+    "show":      { "frames": ["show-chest"], "ms": 1800 },
+    "show_up":   { "frames": ["show-up"], "ms": 1800 },
+    "admire":    { "frames": ["show-look"], "ms": 2000 },
+    "pocket":    { "frames": ["show-pocket"], "ms": 900 },
+
     "land_b":    { "frames": ["splat-impact", "splat-flat", "splat-dazed", "splat-sit", "splat-stand"], "ms": [160, 600, 700, 900, 700], "hold": 1200 }
   }
 }

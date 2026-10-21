@@ -16,7 +16,7 @@ export interface Outcome { kind: OutcomeKind; seq: number }
 
 const RANK: Record<Activity, number> = { idle: 0, tool: 1, generating: 2, ask: 3 }
 const DOWNGRADE_GRACE_MS = 1500   // short gaps (between steps, quick tools) don't flicker the pet
-const CHEER_AFTER_MS = 20_000     // only long turns are worth a "done!" celebration
+export const CHEER_AFTER_MS = 20_000     // only long turns are worth a "done!" celebration
 
 interface SessionState {
   phase: 'idle' | 'generating' | 'tool'
@@ -31,6 +31,9 @@ export class ActivityTracker {
   private outcomeSeq = 0
   private lastOutcome: Outcome | null = null
   private readonly listeners = new Set<() => void>()
+
+  /** A turn finished (any outcome), with how long it took: she earns bait for it. */
+  onTurnEnd: ((ms: number) => void) | undefined
 
   get activity(): Activity { return this.published }
   get outcome(): Outcome | null { return this.lastOutcome }
@@ -76,6 +79,7 @@ export class ActivityTracker {
       : reason === 'completed' && Date.now() - s.turnStartedAt >= CHEER_AFTER_MS ? 'cheer'
       : null
     if (kind) this.lastOutcome = { kind, seq: ++this.outcomeSeq }
+    this.onTurnEnd?.(Date.now() - s.turnStartedAt)
   }
 
   /** Highest-ranked activity across sessions. */

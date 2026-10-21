@@ -7,7 +7,8 @@ import css from '../shared/style.css'
 import { feed, type ScreenRect, type WhaleState } from '../shared/feed.ts'
 import type { RegionSource } from '../shared/region.ts'
 import { ATLAS } from '../shared/sprite.ts'
-import { Whale } from '../shared/whale.ts'
+import { paintTreasure } from '../shared/treasure-art.ts'
+import { Whale, type Diver } from '../shared/whale.ts'
 
 declare global {
   interface Window {
@@ -55,6 +56,11 @@ const params = new URLSearchParams(location.search)
 const token = params.get('t') ?? ''
 const screen = { x: num('sx'), y: num('sy'), w: num('sw') || innerWidth, h: num('sh') || innerHeight }
 const isMainScreen = screen.x === 0 && screen.y === 0
+/** Every connected screen ("x,y,w,h;…"), from the helper; empty from an older helper. */
+const screens: ScreenRect[] = (params.get('screens') ?? '').split(';').filter(Boolean).map(s => {
+  const [x, y, w, h] = s.split(',').map(Number)
+  return { x, y, w, h }
+})
 const DEFAULT_SIZE = { w: 640, h: 320 }   // wide enough for a somersault (~350px)
 
 function num(name: string): number { return Number(params.get(name) ?? 0) }
@@ -72,22 +78,30 @@ Object.assign(layer.style, {
   width: `${screen.w}px`, height: `${screen.h}px`, right: 'auto', bottom: 'auto',
 })
 document.body.append(layer)
+paintTreasure(layer, path => api(`/${path}`))
 
 let state: WhaleState | null = null
 let whale: Whale | null = null
 
-/** The stored region, or a default corner of the main screen before the user picks one. */
+const centreOn = (r: ScreenRect, s: ScreenRect): boolean => {
+  const cx = r.x + r.w / 2, cy = r.y + r.h / 2
+  return cx >= s.x && cx < s.x + s.w && cy >= s.y && cy < s.y + s.h
+}
+
+/**
+ * The stored region, or a default corner of the main screen before the user picks one — or while
+ * the screen it was picked on is unplugged (it is kept, and used again once that screen is back).
+ */
 function globalRegion(): ScreenRect | null {
-  if (state?.region) return state.region
+  const stored = state?.region
+  if (stored && (!screens.length || screens.some(s => centreOn(stored, s)))) return stored
   if (!isMainScreen) return null
   return { x: screen.w - DEFAULT_SIZE.w - 24, y: screen.h - DEFAULT_SIZE.h - 24, ...DEFAULT_SIZE }
 }
 
 function hostsWhale(): boolean {
   const r = globalRegion()
-  if (!r) return false
-  const cx = r.x + r.w / 2, cy = r.y + r.h / 2
-  return cx >= screen.x && cx < screen.x + screen.w && cy >= screen.y && cy < screen.y + screen.h
+  return r !== null && centreOn(r, screen)
 }
 
 const regions: RegionSource = {
@@ -98,6 +112,8 @@ const regions: RegionSource = {
   // Region picking spans every screen, so it is driven by the host: ask, and keep roaming meanwhile.
   async edit() { await post('/edit', { on: true }) },
 }
+
+const dive: Diver = async (force) => (await post('/dive', force ? { force } : {})).json()
 
 // ---- state stream ------------------------------------------------------------------------------
 
@@ -114,7 +130,7 @@ source.onerror = () => { nativeLog('state stream lost'); whale?.setActivity('idl
 
 function syncWhale(prev: WhaleState | null): void {
   if (hostsWhale() && !whale) {
-    whale = new Whale(layer, api(`/assets/${ATLAS}`), regions, () => ({ x: frameX, y: frameY }))
+    whale = new Whale(layer, api(`/assets/${ATLAS}`), regions, () => ({ x: frameX, y: frameY }), dive)
   } else if (!hostsWhale() && whale) {
     whale.dispose()
     whale = null
@@ -182,9 +198,11 @@ setInterval(() => {
   // Rectangles go out in monitor coordinates, including any native frame offset.
   const monitorRect = (r: DOMRect): number[] =>
     [r.x + frameX, r.y + frameY, r.width, r.height].map(Math.round)
-  const rects = whale ? [monitorRect(whale.hitRect())] : []
+  const rects = whale ? whale.hitRects().map(monitorRect) : []
+  // Everything drawn (Windows clips the window to these): her, her bubbles, and the treasure scene —
+  // the smashed hole, flying drops, the flash, her menu, bag and item card.
   const visibleRects = whale
-    ? [whale.root, ...Array.from(whale.root.querySelectorAll<HTMLElement>('.wr-bubble'))]
+    ? [whale.root, ...Array.from(layer.querySelectorAll<HTMLElement>('.wr-bubble, .wr-hole, .wr-drop, .wr-flash, .wr-menu, .wr-bag, .wr-card'))]
         .map(el => monitorRect(el.getBoundingClientRect()))
     : []
   // `capture` = the overlay must keep the mouse; `editing` = the region picker owns the keyboard too.

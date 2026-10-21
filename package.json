@@ -24,8 +24,9 @@
     "build": "node scripts/build.mjs",
     "prepare": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --no-warnings --test src/host/*.test.ts",
     "dev": "node scripts/build.mjs && node dev/serve.mjs",
-    "sprites": "python3 scripts/sprites/build_sprites.py && python3 scripts/sprites/flows.py"
+    "sprites": "python3 scripts/sprites/build_sprites.py && python3 scripts/sprites/flows.py && python3 scripts/sprites/build_treasure.py"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
@@ -60,6 +61,7 @@
     "cordis.patch.yml",
     "assets/sprites/whale.webp",
     "assets/sprites/whale.json",
+    "assets/treasure/*.webp",
     "assets/LICENSE-ARTWORK",
     "LICENSE",
     "NOTICE",
